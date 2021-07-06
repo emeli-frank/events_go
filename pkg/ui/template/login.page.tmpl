@@ -1,0 +1,19 @@
+{{template "base" .}}
+
+{{define "title"}}Home{{end}}
+
+{{define "body"}}
+<form method="POST">
+    <div>
+        <div>Email</div>
+        <input type="email" name="email">
+    </div>
+
+    <div>
+        <div>Password</div>
+        <input type="password" name="password">
+    </div>
+
+    <button type="submit">Submit</button>
+</form>
+{{end}}
