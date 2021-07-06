@@ -14,16 +14,25 @@
         <li>
             <a href="/">Home</a>
         </li>
+        {{if not .User}}
         <li>
             <a href="/login">Login</a>
         </li>
         <li>
             <a href="/register">Sign up</a>
         </li>
+        {{end}}
+        {{if .User}}
         <li>
             <a href="/logout">Logout</a>
         </li>
+        {{end}}
     </ul>
+
+    {{if .User}}
+    <div>{{.User.Names}}</div>
+    {{end}}
+
     {{template "body" .}}
 
     {{template "footer" .}}

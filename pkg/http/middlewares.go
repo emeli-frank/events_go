@@ -3,6 +3,7 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"rsvp/pkg/rsvp"
 )
 
 func (a App) recoverPanic(next http.Handler) http.Handler {
@@ -28,38 +29,6 @@ func (a App) recoverPanic(next http.Handler) http.Handler {
 	})
 }
 
-/*func (h Http) setReqCtxUser(next http.Handler) http.Handler {
-	const op = "setReqCtxUser"
-
-	f := func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") == "" {
-			// no auth header, user is not authenticated
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		bearerTokenSlice := strings.Split(r.Header.Get("Authorization"), " ")
-		if len(bearerTokenSlice) != 2 || bearerTokenSlice[0] != "Bearer" {
-			h.Response.clientError(w, http.StatusUnauthorized, "wrongly formed authentication header")
-			return
-		}
-
-		authToken := bearerTokenSlice[1]
-		u, err := ecommerce.UserFromAuthToken(authToken)
-		if err != nil {
-			// user is not logged in
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		ctx := ecommerce.NewUserContext(r.Context(), u)
-		next.ServeHTTP(w, r.WithContext(ctx))
-		return
-	}
-
-	return http.HandlerFunc(f)
-}*/
-
 /*func (h Http) authenticatedOnly(next http.Handler) http.Handler {
 	const op = "server.authenticatedOnly"
 
@@ -74,3 +43,27 @@ func (a App) recoverPanic(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(f)
 }*/
+
+func (a *App) authenticate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		exists := a.Session.Exists(r, sessionKeyUser)
+		if !exists {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		user, err := a.UserService.User(a.Session.GetInt(r, sessionKeyUser))
+		if /*err == models.ErrNoRecord*/ false { // todo:: check for not found error
+			a.Session.Remove(r, sessionKeyUser)
+			next.ServeHTTP(w, r)
+			return
+		} else if err != nil {
+			// todo:: show server error
+			fmt.Println(err)
+			return
+		}
+
+		ctx := rsvp.NewUserContext(r.Context(), user)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}

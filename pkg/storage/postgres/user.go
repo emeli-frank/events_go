@@ -61,7 +61,7 @@ func (s userStorage) User(uid int) (*rsvp.User, error) {
 
 	query := fmt.Sprintf(`SELECT 
 				users.names, 
-				users.email,
+				users.email
 			FROM users
 			WHERE users.id = %d`, uid)
 

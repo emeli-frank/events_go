@@ -7,7 +7,9 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"path/filepath"
 	"rsvp/pkg/rsvp"
+	"time"
 )
 
 var (
@@ -15,62 +17,30 @@ var (
 	sessionKeyFlash        = "flash"
 )
 
+type templateData struct {
+	User *rsvp.User
+	Flash string
+	CurrentYear int
+	Data interface{}
+}
+
 type App struct {
 	UserService rsvp.UserService
 	ErrorLog *log.Logger
 	Session *sessions.Session
+	TemplateCache map[string]*template.Template
 }
 
 func (a App) home(w http.ResponseWriter, r *http.Request) {
 	const op = "http.home"
 
-	files := []string{
-		"./pkg/ui/template/home.page.tmpl",
-		"./pkg/ui/template/base.layout.tmpl",
-		"./pkg/ui/template/footer.partial.tmpl",
-	}
-
-	t, err := template.ParseFiles(files...)
-	if err != nil {
-		// todo:: handle
-		fmt.Println(err)
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
-
-	err = t.Execute(w, nil)
-	if err != nil {
-		// todo:: handle
-		fmt.Println(err)
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
+	a.render(w, r, "home.page.tmpl", "hello")
 }
 
 func (a App) showRegistrationForm(w http.ResponseWriter, r *http.Request) {
 	const op = "http.showRegistrationForm"
 
-	files := []string{
-		"./pkg/ui/template/registration.page.tmpl",
-		"./pkg/ui/template/base.layout.tmpl",
-		"./pkg/ui/template/footer.partial.tmpl",
-	}
-
-	t, err := template.ParseFiles(files...)
-	if err != nil {
-		// todo:: handle
-		fmt.Println(err)
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
-
-	err = t.Execute(w, nil)
-	if err != nil {
-		// todo:: handle
-		fmt.Println(err)
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
+	a.render(w, r, "registration.page.tmpl", "Hello, world")
 }
 
 func (a App) register(w http.ResponseWriter, r *http.Request) {
@@ -99,27 +69,7 @@ func (a App) register(w http.ResponseWriter, r *http.Request) {
 func (a App) showLoginForm(w http.ResponseWriter, r *http.Request) {
 	const op = "http.showLoginForm"
 
-	files := []string{
-		"./pkg/ui/template/login.page.tmpl",
-		"./pkg/ui/template/base.layout.tmpl",
-		"./pkg/ui/template/footer.partial.tmpl",
-	}
-
-	t, err := template.ParseFiles(files...)
-	if err != nil {
-		// todo:: handle
-		fmt.Println(err)
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
-
-	err = t.Execute(w, nil)
-	if err != nil {
-		// todo:: handle
-		fmt.Println(err)
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
+	a.render(w, r, "login.page.tmpl", "Hello, world")
 }
 
 func (a App) login(w http.ResponseWriter, r *http.Request) {
@@ -151,4 +101,99 @@ func (a App) login(w http.ResponseWriter, r *http.Request) {
 
 	// todo:: change to redirect to "returnUrl"
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (a *App) logoutUser(w http.ResponseWriter, r *http.Request) {
+	a.Session.Remove(r, sessionKeyUser)
+	a.Session.Put(r, sessionKeyFlash, "You've been logged out successfully")
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// NewTemplateCache parses and caches templates in dir
+func NewTemplateCache(dir string) (map[string]*template.Template, error) {
+	cache := map[string]*template.Template{}
+
+	// Use the filepath.Glob function to get a slice of all filepaths with
+	//the extension '.page.tmpl'. This essentially gives us a slice of all the
+	//'page' templates for the application.
+	pages, err := filepath.Glob(filepath.Join(dir, "*.page.tmpl"))
+	if err != nil {
+		return nil, err
+	}
+
+	for _, page := range pages {
+		// Extract the file name (like 'home.page.tmpl') from the full file path
+		// and assign it to the name variable.
+		name := filepath.Base(page)
+
+		ts, err := template.New(name).Funcs(functions).ParseFiles(page)
+		if err != nil {
+			return nil, err
+		}
+
+		// Use the ParseGlob method to add any 'layout' templates to the
+		// template set.
+		ts, err = ts.ParseGlob(filepath.Join(dir, "*.layout.tmpl"))
+		if err != nil {
+			return nil, err
+		}
+
+		// Use the ParseGlob method to add any 'partial' templates to the
+		// template set.
+		ts, err = ts.ParseGlob(filepath.Join(dir, "*.partial.tmpl"))
+		if err != nil {
+			return nil, err
+		}
+
+		// Add the template set to the cache, using the name of the page
+		// (like 'home.page.tmpl') as the key.
+		cache[name] = ts
+	}
+
+	return cache, nil
+}
+
+func (a App) render(w http.ResponseWriter, r *http.Request, name string, td interface{}) {
+	// Retrieve the appropriate template set from the cache based on the page name
+	// (like 'home.page.tmpl'). If no entry exists in the cache with the
+	// provided name, call the serverError helper.
+	ts, ok := a.TemplateCache[name]
+	if !ok {
+		// todo:: show server error
+		//a.serverError(w, fmt.Errorf("The template %s does not exist", name))
+		return
+	}
+
+	// Execute the template set, passing in any dynamic data.
+	err := ts.Execute(w, a.addDefaultData(td, r))
+	if err != nil {
+		// todo:: show server error
+		//a.serverError(w, err)
+		return
+	}
+}
+
+var functions = template.FuncMap{
+	"humanDate": humanDate,
+}
+
+func humanDate(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+
+	return t.UTC().Format("02 Jan 2006 at 15:04")
+}
+
+func (a *App) addDefaultData(data interface{}, r *http.Request) interface{} {
+	u, _ := rsvp.UserFromContext(r.Context())
+
+	td := &templateData{
+		User: u,
+		Flash: a.Session.PopString(r, "flash"),
+		CurrentYear: time.Now().Year(),
+		Data: data,
+	}
+
+	return td
 }

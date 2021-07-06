@@ -33,6 +33,12 @@ func main() {
 	session := sessions.New([]byte(*sessionKey))
 	session.Lifetime = 12 * time.Hour
 
+	// Initialize a new template cache
+	templateCache, err := http2.NewTemplateCache("./pkg/ui/template/")
+	if err != nil {
+		errorLog.Fatal(err)
+	}
+
 	userRepo, err := postgres.NewUserStorage(postgres.New(db))
 	if err != nil {
 		panic(err)
@@ -42,7 +48,9 @@ func main() {
 		UserService: userService,
 		ErrorLog: errorLog,
 		Session: session,
+		TemplateCache: templateCache,
 	}
+
 	router := app.Routes()
 
 	srv := &http.Server{
