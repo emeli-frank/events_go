@@ -44,7 +44,7 @@ func (s *userService) EmailMatchPassword(email string, password string) (bool, i
 		case *rsvp.NotFound:
 			return false, 0, nil
 		default:
-			return false, 0, err
+			return false, 0, err // todo:: wrap errors
 		}
 	}
 

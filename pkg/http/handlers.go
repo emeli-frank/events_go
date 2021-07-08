@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"rsvp/pkg/rsvp"
+	"runtime/debug"
 	"time"
 )
 
@@ -32,15 +33,11 @@ type App struct {
 }
 
 func (a App) home(w http.ResponseWriter, r *http.Request) {
-	const op = "http.home"
-
-	a.render(w, r, "home.page.tmpl", "hello")
+	a.render(w, r, "home.page.tmpl", nil)
 }
 
 func (a App) showRegistrationForm(w http.ResponseWriter, r *http.Request) {
-	const op = "http.showRegistrationForm"
-
-	a.render(w, r, "registration.page.tmpl", "Hello, world")
+	a.render(w, r, "registration.page.tmpl", nil)
 }
 
 func (a App) register(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +55,7 @@ func (a App) register(w http.ResponseWriter, r *http.Request) {
 
 	_, err := a.UserService.CreateUser(&u, password)
 	if err != nil {
-		serverError(w, a.ErrorLog, err)
+		a.serverError(w, r, err)
 	}
 
 	a.Session.Put(r, sessionKeyFlash, "Your account was successfully created. Please login")
@@ -98,6 +95,7 @@ func (a App) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.Session.Put(r, sessionKeyUser, uid)
+	a.Session.Put(r, sessionKeyFlash, "You were successfully logged in")
 
 	// todo:: change to redirect to "returnUrl"
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -107,6 +105,22 @@ func (a *App) logoutUser(w http.ResponseWriter, r *http.Request) {
 	a.Session.Remove(r, sessionKeyUser)
 	a.Session.Put(r, sessionKeyFlash, "You've been logged out successfully")
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (a *App) notFoundHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotFound)
+	a.render(w, r, "404.page.tmpl", nil)
+}
+
+func (a *App) serverError(w http.ResponseWriter, r *http.Request, err error) {
+	trace := fmt.Sprintf("%s\n%s", err.Error(), debug.Stack())
+	_ = a.ErrorLog.Output(2, trace)
+	a.render(w, r, "server-error.page.tmpl", nil)
+	w.WriteHeader(http.StatusInternalServerError)
+}
+
+func (a *App) clientError(w http.ResponseWriter, status int) {
+	http.Error(w, http.StatusText(status), status)
 }
 
 // NewTemplateCache parses and caches templates in dir
@@ -171,6 +185,9 @@ func (a App) render(w http.ResponseWriter, r *http.Request, name string, td inte
 		//a.serverError(w, err)
 		return
 	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 }
 
 var functions = template.FuncMap{

@@ -33,7 +33,13 @@
     <div>{{.User.Names}}</div>
     {{end}}
 
-    {{template "body" .}}
+    {{with .Flash}}
+    <div class='flash'>{{.}}</div>
+    {{end}}
+
+    <main>
+        {{template "body" .}}
+    </main>
 
     {{template "footer" .}}
 </body>

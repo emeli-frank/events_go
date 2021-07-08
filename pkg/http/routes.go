@@ -19,6 +19,8 @@ func (a App) Routes() http.Handler {
 	r.Handle("/login", dynamicMiddleware.Then(http.HandlerFunc(a.login))).Methods("POST")
 	r.Handle("/logout", dynamicMiddleware.Then(http.HandlerFunc(a.logoutUser))).Methods("GET")
 
+	r.NotFoundHandler = dynamicMiddleware.Then(http.HandlerFunc(a.notFoundHandler))
+
 	// file route
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./pkg/ui/static"))))
 
