@@ -7,6 +7,7 @@ import (
 
 var (
 	ErrNotAPtr = errors.New("deactivation setter is not a pointer")
+	TxIsNil    = errors.New("transaction is nil")
 )
 
 const (

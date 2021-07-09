@@ -39,13 +39,23 @@ func main() {
 		errorLog.Fatal(err)
 	}
 
-	userRepo, err := postgres.NewUserStorage(postgres.New(db))
+	psql := postgres.New(db)
+
+	userRepo, err := postgres.NewUserStorage(psql)
 	if err != nil {
 		panic(err)
 	}
 	userService := services.NewUserService(userRepo)
+
+	invitationRepo, err := postgres.NewInvitationStorage(psql)
+	if err != nil {
+		panic(err)
+	}
+	invitationService := services.NewInvitationService(invitationRepo)
+
 	app := &http2.App{
 		UserService: userService,
+		InvitationService: invitationService,
 		ErrorLog: errorLog,
 		Session: session,
 		TemplateCache: templateCache,

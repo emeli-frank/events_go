@@ -8,8 +8,10 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	errors2 "rsvp/pkg/errors"
 	"rsvp/pkg/rsvp"
 	"runtime/debug"
+	"strconv"
 	"time"
 )
 
@@ -26,10 +28,11 @@ type templateData struct {
 }
 
 type App struct {
-	UserService rsvp.UserService
 	ErrorLog *log.Logger
 	Session *sessions.Session
 	TemplateCache map[string]*template.Template
+	UserService rsvp.UserService
+	InvitationService rsvp.InvitationService
 }
 
 func (a App) home(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +75,6 @@ func (a App) showLoginForm(w http.ResponseWriter, r *http.Request) {
 func (a App) login(w http.ResponseWriter, r *http.Request) {
 	const op = "http.login"
 
-	r.FormValue("names")
 	email := r.FormValue("email")
 	password := r.FormValue("password")
 	returnUrl := r.FormValue("return-url")
@@ -105,6 +107,123 @@ func (a *App) logoutUser(w http.ResponseWriter, r *http.Request) {
 	a.Session.Remove(r, sessionKeyUser)
 	a.Session.Put(r, sessionKeyFlash, "You've been logged out successfully")
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (a App) showInvitations(w http.ResponseWriter, r *http.Request) {
+	const op = "http.showInvitations"
+
+	a.render(w, r, "invitations.page.tmpl", nil)
+}
+
+func (a App) showInvitationForm(w http.ResponseWriter, r *http.Request) {
+	const op = "http.showInvitationForm"
+
+	a.render(w, r, "invitation-form.page.tmpl", nil)
+}
+
+func (a App) createInvitation(w http.ResponseWriter, r *http.Request) {
+	const op = "http.createInvitation"
+
+	i, err := invitationsFromRequest(r)
+	if err != nil {
+		// todo:: handle
+		fmt.Println(err)
+		return
+	}
+
+	_, err = a.InvitationService.CreateInvitation(i)
+	if err != nil {
+		a.serverError(w, r, err)
+	}
+
+	http.Redirect(w, r, "/invitations", http.StatusSeeOther)
+}
+
+func invitationsFromRequest(r *http.Request) (*rsvp.Invitation, error) {
+	const op = "invitationsFromRequest"
+
+	var id int
+	var err error
+	if idStr := r.FormValue("id"); idStr == "" {
+		id = 0
+	} else {
+		id, err = strconv.Atoi(r.FormValue("id"))
+		if err != nil {
+			return nil, errors2.Wrap(err, op, "getting id form value")
+		}
+	}
+
+	tz := r.FormValue("timezone")
+	if tz == "" {
+		return nil, errors2.Wrap(err, op, "getting timezone form value")
+	}
+
+	var startTime *time.Time
+	if startTimeStr := r.FormValue("start_time"); startTimeStr == "" {
+		startTime = nil
+	} else {
+		//t, err := time.Parse(time.RFC3339, startTimeStr)
+		t, err := time.Parse("2006-01-02T15:04", startTimeStr)
+		if err != nil {
+			return nil, errors2.Wrap(err, op, "parsing form time")
+		}
+
+		loc, err := time.LoadLocation(tz)
+		if err != nil {
+			return nil, errors2.Wrap(err, op, "parsing form time")
+		}
+
+		t = t.In(loc)
+		startTime = &t
+	}
+
+	var endTime *time.Time
+	if endTimeStr := r.FormValue("end_time"); endTimeStr == "" {
+		endTime = nil
+	} else {
+		//t, err := time.Parse(time.RFC3339, endTimeStr)
+		t, err := time.Parse("2006-01-02T15:04", endTimeStr)
+		if err != nil {
+			return nil, errors2.Wrap(err, op, "parsing form time")
+		}
+
+		loc, err := time.LoadLocation(tz)
+		if err != nil {
+			return nil, errors2.Wrap(err, op, "parsing form time")
+		}
+
+		t = t.In(loc)
+		endTime = &t
+	}
+
+	var isPublished bool
+	isPublishedStr := r.FormValue("is_published")
+	if isPublishedStr == "true" {
+		isPublished = true
+	} else if isPublishedStr == "false" ||isPublishedStr == "" {
+		isPublished = false
+	} else {
+		return nil, errors2.Wrap(
+			fmt.Errorf(
+				"is_published form value could not be converted to boolean, got %v", isPublishedStr),
+				op,
+				"getting is_published form value",
+		)
+	}
+
+	return &rsvp.Invitation{
+		ID:             id,
+		Title:          r.FormValue("title"),
+		Description:    r.FormValue("description"),
+		IsVirtual:      false,
+		Address:        r.FormValue("address"),
+		Link:           r.FormValue("link"),
+		NumberOfSeats:  0,
+		StartTime:      startTime,
+		EndTime:        endTime,
+		WelcomeMessage: r.FormValue("welcome_message"),
+		IsPublished:    isPublished,
+	}, nil
 }
 
 func (a *App) notFoundHandler(w http.ResponseWriter, r *http.Request) {

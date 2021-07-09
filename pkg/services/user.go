@@ -4,20 +4,22 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	errors2 "rsvp/pkg/errors"
 	"rsvp/pkg/rsvp"
+	"rsvp/pkg/storage/postgres"
 )
 
-type repo interface {
+type userRepo interface {
+	postgres.Postgres
 	SaveUser(u *rsvp.User, hashedPassword string) (int, error)
 	UserIDAndPasswordByEmail(email string) (int, string, error)
 	User(uid int) (*rsvp.User, error)
 }
 
-func NewUserService(r repo) *userService {
+func NewUserService(r userRepo) *userService {
 	return &userService{r: r}
 }
 
 type userService struct {
-	r repo
+	r userRepo
 }
 
 func (s *userService) CreateUser(u *rsvp.User, password string) (int, error) {

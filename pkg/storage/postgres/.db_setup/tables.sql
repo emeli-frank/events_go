@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS users;
 CREATE TABLE users
 (
     id SERIAL,
@@ -10,11 +11,12 @@ CREATE TABLE users
     UNIQUE (email)
 );
 
+DROP TABLE IF EXISTS invitations;
 CREATE TABLE invitations
 (
     id SERIAL,
-    title VARCHAR(64) NOT NULL,
-    description VARCHAR (128) NOT NULL,
+    title VARCHAR(64),
+    description VARCHAR (128),
     is_virtual BOOLEAN,
     address VARCHAR(128),
     link VARCHAR(128),
@@ -22,19 +24,21 @@ CREATE TABLE invitations
     start_time timestamptz,
     end_time timestamptz,
     welcome_message text,
+    is_published BOOLEAN,
 
     PRIMARY KEY (id)
 );
 
-    CREATE TABLE user_invitations
-    (
-        user_id INT,
-        invitation_id INT,
+DROP TABLE IF EXISTS user_invitations;
+CREATE TABLE user_invitations
+(
+    user_id INT,
+    invitation_id INT,
 
-        FOREIGN KEY (user_id)
-            REFERENCES users (id)
-            ON DELETE CASCADE,
-        FOREIGN KEY (invitation_id)
-            REFERENCES invitations (id)
-            ON DELETE CASCADE
-    );
+    FOREIGN KEY (user_id)
+        REFERENCES users (id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (invitation_id)
+        REFERENCES invitations (id)
+        ON DELETE CASCADE
+);

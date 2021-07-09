@@ -18,6 +18,9 @@ func (a App) Routes() http.Handler {
 	r.Handle("/login", dynamicMiddleware.Then(http.HandlerFunc(a.showLoginForm))).Methods("GET")
 	r.Handle("/login", dynamicMiddleware.Then(http.HandlerFunc(a.login))).Methods("POST")
 	r.Handle("/logout", dynamicMiddleware.Then(http.HandlerFunc(a.logoutUser))).Methods("GET")
+	r.Handle("/invitations", dynamicMiddleware.Then(http.HandlerFunc(a.showInvitations))).Methods("GET")
+	r.Handle("/invitations/create", dynamicMiddleware.Then(http.HandlerFunc(a.showInvitationForm))).Methods("GET")
+	r.Handle("/invitations/create", dynamicMiddleware.Then(http.HandlerFunc(a.createInvitation))).Methods("POST")
 
 	r.NotFoundHandler = dynamicMiddleware.Then(http.HandlerFunc(a.notFoundHandler))
 
