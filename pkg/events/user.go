@@ -1,4 +1,4 @@
-package rsvp
+package events
 
 import "context"
 
@@ -6,6 +6,7 @@ type contextKey string
 var ContextKeyUser = contextKey("user")
 
 type User struct {
+	ID int
 	Names string
 	Email string
 	IsAdmin bool

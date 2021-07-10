@@ -1,8 +1,8 @@
-package rsvp
+package events
 
 import "time"
 
-type Invitation struct {
+type Event struct {
 	ID             int
 	Title          string
 	Description    string
@@ -16,6 +16,6 @@ type Invitation struct {
 	IsPublished    bool
 }
 
-type InvitationService interface {
-	CreateInvitation(i *Invitation) (int, error)
+type EventService interface {
+	CreateEvent(i *Event, uid int) (int, error)
 }

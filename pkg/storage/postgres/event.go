@@ -3,33 +3,33 @@ package postgres
 import (
 	"database/sql"
 	"errors"
+	errors2 "events/pkg/errors"
+	"events/pkg/events"
+	"events/pkg/storage"
 	"github.com/lib/pq"
-	errors2 "rsvp/pkg/errors"
-	"rsvp/pkg/rsvp"
-	"rsvp/pkg/storage"
 )
 
-func NewInvitationStorage(base Postgres) (*invitationStorage, error) {
+func NewEventStorage(base Postgres) (*eventStorage, error) {
 	if base == nil {
 		return nil, errors.New("base is nil")
 	}
-	return &invitationStorage{base}, nil
+	return &eventStorage{base}, nil
 }
 
-type invitationStorage struct {
+type eventStorage struct {
 	Postgres
 }
 
-func (s *invitationStorage) SaveInvitationTx(tx *sql.Tx, title string) (int, error) {
-	const op = "userStorage.SaveInvitationTx"
+func (s *eventStorage) SaveEventTx(tx *sql.Tx, title string, uid int) (int, error) {
+	const op = "eventStorage.SaveEventTx"
 
 	if tx == nil {
 		return 0, errors2.Wrap(storage.TxIsNil, op, "checking transaction")
 	}
 
-	query := "INSERT INTO invitations (title) VALUES ($1) RETURNING id"
+	query := "INSERT INTO events (title, host) VALUES ($1, $2) RETURNING id"
 	var id int
-	err := tx.QueryRow(query, title).Scan(&id)
+	err := tx.QueryRow(query, title, uid).Scan(&id)
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok {
 			// todo:: handle error due to duplicate
@@ -42,14 +42,14 @@ func (s *invitationStorage) SaveInvitationTx(tx *sql.Tx, title string) (int, err
 	return id, nil
 }
 
-func (s *invitationStorage) UpdateInvitationTx(tx *sql.Tx, i *rsvp.Invitation) error {
-	const op = "userStorage.UpdateInvitationTx"
+func (s *eventStorage) UpdateEventTx(tx *sql.Tx, i *events.Event) error {
+	const op = "eventStorage.UpdateEventTx"
 
 	if tx == nil {
 		return errors2.Wrap(storage.TxIsNil, op, "checking transaction")
 	}
 
-	query := `Update invitations 
+	query := `Update events 
 		SET 
 		    title = $1,
 		    description = $2,

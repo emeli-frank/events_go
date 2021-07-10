@@ -8,8 +8,9 @@ import (
 
 func (a App) Routes() http.Handler {
 	standardMiddleWare := alice.New(/*h.recoverPanic ,*/ /*h.setReqCtxUser*/)
-	//authOnlyMiddleWare := alice.New(/*s.checkJWT, */s.authenticatedOnly)
-	dynamicMiddleware := alice.New(a.Session.Enable, a.authenticate)
+	//authOnlyMiddleWare := alice.New(/*s.checkJWT, */s.authenticateUser)
+	dynamicMiddleware := alice.New(a.Session.Enable, a.addUserToSession)
+	authenticatedOnly := alice.New(dynamicMiddleware.Then, a.authenticatedUser)
 
 	r := mux.NewRouter()
 	r.Handle("/", dynamicMiddleware.Then(http.HandlerFunc(a.home))).Methods("GET")
@@ -18,9 +19,9 @@ func (a App) Routes() http.Handler {
 	r.Handle("/login", dynamicMiddleware.Then(http.HandlerFunc(a.showLoginForm))).Methods("GET")
 	r.Handle("/login", dynamicMiddleware.Then(http.HandlerFunc(a.login))).Methods("POST")
 	r.Handle("/logout", dynamicMiddleware.Then(http.HandlerFunc(a.logoutUser))).Methods("GET")
-	r.Handle("/invitations", dynamicMiddleware.Then(http.HandlerFunc(a.showInvitations))).Methods("GET")
-	r.Handle("/invitations/create", dynamicMiddleware.Then(http.HandlerFunc(a.showInvitationForm))).Methods("GET")
-	r.Handle("/invitations/create", dynamicMiddleware.Then(http.HandlerFunc(a.createInvitation))).Methods("POST")
+	r.Handle("/events", authenticatedOnly.Then(http.HandlerFunc(a.showEvents))).Methods("GET")
+	r.Handle("/events/create", authenticatedOnly.Then(http.HandlerFunc(a.showEventForm))).Methods("GET")
+	r.Handle("/events/create", authenticatedOnly.Then(http.HandlerFunc(a.createEvent))).Methods("POST")
 
 	r.NotFoundHandler = dynamicMiddleware.Then(http.HandlerFunc(a.notFoundHandler))
 

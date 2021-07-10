@@ -1,4 +1,4 @@
-package rsvp
+package events
 
 type NotFound struct {
 	Err     error

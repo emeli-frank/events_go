@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/lib/pq"
-	errors2 "rsvp/pkg/errors"
-	"rsvp/pkg/rsvp"
+	errors2 "events/pkg/errors"
+	"events/pkg/events"
 )
 
 func NewUserStorage(base Postgres) (*userStorage, error) {
@@ -20,7 +20,7 @@ type userStorage struct {
 	Postgres
 }
 
-func (s *userStorage) SaveUser(u *rsvp.User, hashedPassword string) (int, error) {
+func (s *userStorage) SaveUser(u *events.User, hashedPassword string) (int, error) {
 	const op = "userStorage.SaveUser"
 
 	query := "INSERT INTO users (names, email, password) VALUES ($1, $2, $3) RETURNING id"
@@ -47,7 +47,7 @@ func (s *userStorage) UserIDAndPasswordByEmail(email string) (int, string, error
 	var password string
 	err := s.DB().QueryRow(query, email).Scan(&id, &password)
 	if err == sql.ErrNoRows {
-		err = &rsvp.NotFound{Err: errors.New("user not found")}
+		err = &events.NotFound{Err: errors.New("user not found")}
 		return 0, op, errors2.Wrap(err, op, "scanning into var")
 	} else if err != nil {
 		return 0, op, errors2.Wrap(err, op, "scanning into var")
@@ -56,17 +56,18 @@ func (s *userStorage) UserIDAndPasswordByEmail(email string) (int, string, error
 	return id, password, nil
 }
 
-func (s userStorage) User(uid int) (*rsvp.User, error) {
+func (s userStorage) User(uid int) (*events.User, error) {
 	const op = "userStorage.User"
 
 	query := fmt.Sprintf(`SELECT 
+				users.id,
 				users.names, 
 				users.email
 			FROM users
 			WHERE users.id = %d`, uid)
 
-	var u rsvp.User
-	err := s.DB().QueryRow(query).Scan(&u.Names, &u.Email)
+	var u events.User
+	err := s.DB().QueryRow(query).Scan(&u.ID, &u.Names, &u.Email)
 
 	return &u, errors2.Wrap(err, op, "querying rows")
 }

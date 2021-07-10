@@ -8,8 +8,8 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
-	errors2 "rsvp/pkg/errors"
-	"rsvp/pkg/rsvp"
+	errors2 "events/pkg/errors"
+	"events/pkg/events"
 	"runtime/debug"
 	"strconv"
 	"time"
@@ -21,18 +21,18 @@ var (
 )
 
 type templateData struct {
-	User *rsvp.User
+	User *events.User
 	Flash string
 	CurrentYear int
 	Data interface{}
 }
 
 type App struct {
-	ErrorLog *log.Logger
-	Session *sessions.Session
+	ErrorLog      *log.Logger
+	Session       *sessions.Session
 	TemplateCache map[string]*template.Template
-	UserService rsvp.UserService
-	InvitationService rsvp.InvitationService
+	UserService   events.UserService
+	EventService  events.EventService
 }
 
 func (a App) home(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +51,7 @@ func (a App) register(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	password := r.FormValue("password")
 
-	u := rsvp.User{
+	u := events.User{
 		Names: names,
 		Email: email,
 	}
@@ -109,38 +109,45 @@ func (a *App) logoutUser(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func (a App) showInvitations(w http.ResponseWriter, r *http.Request) {
-	const op = "http.showInvitations"
+func (a App) showEvents(w http.ResponseWriter, r *http.Request) {
+	const op = "http.showEvents"
 
-	a.render(w, r, "invitations.page.tmpl", nil)
+	a.render(w, r, "events.page.tmpl", nil)
 }
 
-func (a App) showInvitationForm(w http.ResponseWriter, r *http.Request) {
-	const op = "http.showInvitationForm"
+func (a App) showEventForm(w http.ResponseWriter, r *http.Request) {
+	const op = "http.showEventForm"
 
-	a.render(w, r, "invitation-form.page.tmpl", nil)
+	a.render(w, r, "event-form.page.tmpl", nil)
 }
 
-func (a App) createInvitation(w http.ResponseWriter, r *http.Request) {
-	const op = "http.createInvitation"
+func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
+	const op = "http.createEvent"
 
-	i, err := invitationsFromRequest(r)
+	i, err := eventFromRequest(r)
 	if err != nil {
 		// todo:: handle
 		fmt.Println(err)
 		return
 	}
 
-	_, err = a.InvitationService.CreateInvitation(i)
+	u, ok := events.UserFromContext(r.Context())
+	if !ok {
+		// todo:: handle -> server error
+		fmt.Println(err)
+		return
+	}
+
+	_, err = a.EventService.CreateEvent(i, u.ID)
 	if err != nil {
 		a.serverError(w, r, err)
 	}
 
-	http.Redirect(w, r, "/invitations", http.StatusSeeOther)
+	http.Redirect(w, r, "/events", http.StatusSeeOther)
 }
 
-func invitationsFromRequest(r *http.Request) (*rsvp.Invitation, error) {
-	const op = "invitationsFromRequest"
+func eventFromRequest(r *http.Request) (*events.Event, error) {
+	const op = "eventFromRequest"
 
 	var id int
 	var err error
@@ -211,7 +218,7 @@ func invitationsFromRequest(r *http.Request) (*rsvp.Invitation, error) {
 		)
 	}
 
-	return &rsvp.Invitation{
+	return &events.Event{
 		ID:             id,
 		Title:          r.FormValue("title"),
 		Description:    r.FormValue("description"),
@@ -247,8 +254,8 @@ func NewTemplateCache(dir string) (map[string]*template.Template, error) {
 	cache := map[string]*template.Template{}
 
 	// Use the filepath.Glob function to get a slice of all filepaths with
-	//the extension '.page.tmpl'. This essentially gives us a slice of all the
-	//'page' templates for the application.
+	// the extension '.page.tmpl'. This essentially gives us a slice of all the
+	// 'page' templates for the application.
 	pages, err := filepath.Glob(filepath.Join(dir, "*.page.tmpl"))
 	if err != nil {
 		return nil, err
@@ -322,7 +329,7 @@ func humanDate(t time.Time) string {
 }
 
 func (a *App) addDefaultData(data interface{}, r *http.Request) interface{} {
-	u, _ := rsvp.UserFromContext(r.Context())
+	u, _ := events.UserFromContext(r.Context())
 
 	td := &templateData{
 		User: u,

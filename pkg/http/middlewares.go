@@ -3,7 +3,8 @@ package http
 import (
 	"fmt"
 	"net/http"
-	"rsvp/pkg/rsvp"
+	errors2 "events/pkg/errors"
+	"events/pkg/events"
 )
 
 func (a App) recoverPanic(next http.Handler) http.Handler {
@@ -29,12 +30,12 @@ func (a App) recoverPanic(next http.Handler) http.Handler {
 	})
 }
 
-/*func (h Http) authenticatedOnly(next http.Handler) http.Handler {
-	const op = "server.authenticatedOnly"
+func (a App) authenticatedUser(next http.Handler) http.Handler {
+	const op = "app.authenticatedUser"
 
 	f := func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := ecommerce.UserFromContext(r.Context()); !ok {
-			h.Response.clientError(w, http.StatusUnauthorized, "")
+		if _, ok := events.UserFromContext(r.Context()); !ok {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
 
@@ -42,9 +43,12 @@ func (a App) recoverPanic(next http.Handler) http.Handler {
 	}
 
 	return http.HandlerFunc(f)
-}*/
+}
 
-func (a *App) authenticate(next http.Handler) http.Handler {
+// addUserToSession adds user to session if their id is present in
+// session and calls next.ServerHTTP or just calls next.ServerHTTP if
+// their id is absent.
+func (a *App) addUserToSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		exists := a.Session.Exists(r, sessionKeyUser)
 		if !exists {
@@ -53,7 +57,7 @@ func (a *App) authenticate(next http.Handler) http.Handler {
 		}
 
 		user, err := a.UserService.User(a.Session.GetInt(r, sessionKeyUser))
-		if /*err == models.ErrNoRecord*/ false { // todo:: check for not found error
+		if _, ok := errors2.Unwrap(err).(*events.NotFound); ok {
 			a.Session.Remove(r, sessionKeyUser)
 			next.ServeHTTP(w, r)
 			return
@@ -63,7 +67,7 @@ func (a *App) authenticate(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := rsvp.NewUserContext(r.Context(), user)
+		ctx := events.NewUserContext(r.Context(), user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

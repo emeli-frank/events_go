@@ -2,14 +2,15 @@ package main
 
 import (
 	"database/sql"
+	"events/pkg/errors"
+	"events/pkg/mock"
+	"events/pkg/storage"
 	"flag"
 	"fmt"
 	_ "github.com/lib/pq"
 	"log"
 	"os"
 	"path/filepath"
-	"rsvp/pkg/mock"
-	"rsvp/pkg/storage"
 	"time"
 )
 
@@ -21,7 +22,7 @@ type application struct {
 }
 
 func main() {
-	dsn := flag.String("dsn", "host=localhost port=5432 user=rsvp password=password dbname=rsvp sslmode=disable", "Postgresql database connection info")
+	dsn := flag.String("dsn", "host=localhost port=5432 user=events password=password dbname=events sslmode=disable", "Postgresql database connection info")
 	sqlScriptPath := flag.String("sql_script_path", "./pkg/storage/postgres/.db_setup/", "sql script path")
 	flag.Parse()
 
@@ -42,6 +43,7 @@ func main() {
 	mocker := &mock.Mock{
 		DB:                db,
 		W:                 os.Stdout,
+		ScriptPath: filepath.Join(sqlScriptPath2, "mock"),
 	}
 
 	app := application{
@@ -85,10 +87,12 @@ func main() {
 }
 
 func (a application) createCoreData(app application, sqlScriptPath string) error {
+	const op = "app.createCoreData"
+
 	fmt.Println("Creating tables...")
 	t := time.Now()
 	if err := app.createTables(sqlScriptPath); err != nil {
-		return err
+		return errors.Wrap(err, op, "creating table")
 	}
 	fmt.Printf("\tfinished creating table in %vs\n", time.Since(t))
 
@@ -96,7 +100,7 @@ func (a application) createCoreData(app application, sqlScriptPath string) error
 	fmt.Println("Creating core data...")
 	err := storage.ExecScripts(a.DB, sqlScriptPath + "/data.sql")
 	if err != nil {
-		panic(err)
+		return errors.Wrap(err, op, "executing script holding applciation core data")
 	}
 	fmt.Printf("\tfinished creating core data in %vs\n", time.Since(t))
 
@@ -104,6 +108,8 @@ func (a application) createCoreData(app application, sqlScriptPath string) error
 }
 
 func (a application) createMockData(app application, sqlScriptPath string) error {
+	const op = "app.createMockData"
+
 	t := time.Now()
 	fmt.Println("Creating mock data...")
 	err := a.mocker.SeedDB()

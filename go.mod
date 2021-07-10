@@ -1,4 +1,4 @@
-module rsvp
+module events
 
 go 1.16
 

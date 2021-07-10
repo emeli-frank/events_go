@@ -1,6 +1,10 @@
 package main
 
 import (
+	http2 "events/pkg/http"
+	"events/pkg/services"
+	"events/pkg/storage"
+	"events/pkg/storage/postgres"
 	"flag"
 	"fmt"
 	"github.com/golangcollege/sessions"
@@ -8,17 +12,13 @@ import (
 	"log"
 	"net/http"
 	"os"
-	http2 "rsvp/pkg/http"
-	"rsvp/pkg/services"
-	"rsvp/pkg/storage"
-	"rsvp/pkg/storage/postgres"
 	"time"
 )
 
 func main() {
 	addr := flag.String("addr", ":5000", "HTTP network address")
 	sessionKey := flag.String("sessionKey", "s6Ndh+pPbnzHbS*+9Pk8qGWhTzbpa@ge", "Session key")
-	dsn := flag.String("dsn", "host=localhost port=5432 user=rsvp password=password dbname=rsvp sslmode=disable", "Postgresql database connection info")
+	dsn := flag.String("dsn", "host=localhost port=5432 user=events password=password dbname=events sslmode=disable", "Postgresql database connection info")
 	flag.Parse()
 
 	//infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
@@ -47,17 +47,17 @@ func main() {
 	}
 	userService := services.NewUserService(userRepo)
 
-	invitationRepo, err := postgres.NewInvitationStorage(psql)
+	invitationRepo, err := postgres.NewEventStorage(psql)
 	if err != nil {
 		panic(err)
 	}
-	invitationService := services.NewInvitationService(invitationRepo)
+	invitationService := services.NewEventService(invitationRepo)
 
 	app := &http2.App{
-		UserService: userService,
-		InvitationService: invitationService,
-		ErrorLog: errorLog,
-		Session: session,
+		UserService:   userService,
+		EventService:  invitationService,
+		ErrorLog:      errorLog,
+		Session:       session,
 		TemplateCache: templateCache,
 	}
 

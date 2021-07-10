@@ -2,16 +2,16 @@ package services
 
 import (
 	"golang.org/x/crypto/bcrypt"
-	errors2 "rsvp/pkg/errors"
-	"rsvp/pkg/rsvp"
-	"rsvp/pkg/storage/postgres"
+	errors2 "events/pkg/errors"
+	"events/pkg/events"
+	"events/pkg/storage/postgres"
 )
 
 type userRepo interface {
 	postgres.Postgres
-	SaveUser(u *rsvp.User, hashedPassword string) (int, error)
+	SaveUser(u *events.User, hashedPassword string) (int, error)
 	UserIDAndPasswordByEmail(email string) (int, string, error)
-	User(uid int) (*rsvp.User, error)
+	User(uid int) (*events.User, error)
 }
 
 func NewUserService(r userRepo) *userService {
@@ -22,7 +22,7 @@ type userService struct {
 	r userRepo
 }
 
-func (s *userService) CreateUser(u *rsvp.User, password string) (int, error) {
+func (s *userService) CreateUser(u *events.User, password string) (int, error) {
 	const op = "userStorage.CreateUser"
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
@@ -43,7 +43,7 @@ func (s *userService) EmailMatchPassword(email string, password string) (bool, i
 	uid, hashedPassword, err := s.r.UserIDAndPasswordByEmail(email)
 	if err != nil {
 		switch errors2.Unwrap(err).(type) {
-		case *rsvp.NotFound:
+		case *events.NotFound:
 			return false, 0, nil
 		default:
 			return false, 0, err // todo:: wrap errors
@@ -61,7 +61,7 @@ func (s *userService) EmailMatchPassword(email string, password string) (bool, i
 	return true, uid, nil
 }
 
-func (s *userService) User(uid int) (*rsvp.User, error) {
+func (s *userService) User(uid int) (*events.User, error) {
 	const op = "userService.User"
 
 	u, err := s.r.User(uid)

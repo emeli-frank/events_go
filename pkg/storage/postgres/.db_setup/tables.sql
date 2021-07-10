@@ -11,8 +11,8 @@ CREATE TABLE users
     UNIQUE (email)
 );
 
-DROP TABLE IF EXISTS invitations;
-CREATE TABLE invitations
+DROP TABLE IF EXISTS events;
+CREATE TABLE events
 (
     id SERIAL,
     title VARCHAR(64),
@@ -25,20 +25,24 @@ CREATE TABLE invitations
     end_time timestamptz,
     welcome_message text,
     is_published BOOLEAN,
+    host INT NOT NULL,
 
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    FOREIGN KEY (host)
+        REFERENCES users (id)
+        ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS user_invitations;
-CREATE TABLE user_invitations
+DROP TABLE IF EXISTS user_events;
+CREATE TABLE user_events
 (
     user_id INT,
-    invitation_id INT,
+    event_id INT,
 
     FOREIGN KEY (user_id)
         REFERENCES users (id)
         ON DELETE CASCADE,
-    FOREIGN KEY (invitation_id)
-        REFERENCES invitations (id)
+    FOREIGN KEY (event_id)
+        REFERENCES events (id)
         ON DELETE CASCADE
 );
