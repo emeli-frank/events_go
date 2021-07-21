@@ -1,0 +1,51 @@
+{{define "form"}}
+<form method="post" enctype="multipart/form-data">
+    <input type="text" name="title" placeholder="Title" value='{{.Get "title"}}'>
+    <div>
+        Event Description
+        <textarea name="description" placeholder="welcome_message">{{.Get "description"}}</textarea>
+        {{.GetError "title"}}
+    </div>
+    Mode
+    <select name="mode">
+        <option
+                value="virtual"
+                {{if eq (.Get "mode") "virtual"}}selected{{end}}>Virtual</option>
+        <option
+                value="physical"
+                {{if eq (.Get "mode") "physical"}}selected{{end}}>Physical</option>
+    </select>
+    <div>
+        Address
+        <textarea name="address" placeholder="address">{{.Get "address"}}</textarea>
+    </div>
+    <input type="text" name="link" placeholder="link"  value='{{.Get "link"}}'>
+    <input type="text" name="number_of_seats" placeholder="Number of seats" value='{{.Get "number_of_seats"}}'>
+    <input type="datetime-local" name="start_time" placeholder="start_time" value='{{.Get "start_time"}}'>
+    <input type="datetime-local" name="end_time" placeholder="end_time" value='{{.Get "end_time"}}'>
+    <div>
+        Welcome message
+        <textarea name="welcome_message" placeholder="welcome_message">{{.Get "welcome_message"}}</textarea>
+    </div>
+
+    <div>
+        Cover image
+        <input type="file" name="cover_image">
+    </div>
+
+    <input type="hidden" name="timezone" value="" id="timezone-input">
+
+    <button type="submit">Submit</button>
+</form>
+
+<script>
+    // set timezone
+    window.addEventListener("load", function () {
+        const tzElem = document.querySelector("#timezone-input");
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        tzElem.setAttribute("value", tz);
+    });
+
+
+</script>
+{{end}}

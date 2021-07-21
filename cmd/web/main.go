@@ -32,6 +32,7 @@ func main() {
 
 	session := sessions.New([]byte(*sessionKey))
 	session.Lifetime = 12 * time.Hour
+	//session.Lifetime = 5 * time.Second // todo:: remove
 
 	// Initialize a new template cache
 	templateCache, err := http2.NewTemplateCache("./pkg/ui/template/")

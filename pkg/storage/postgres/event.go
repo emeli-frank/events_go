@@ -9,18 +9,18 @@ import (
 	"github.com/lib/pq"
 )
 
-func NewEventStorage(base Postgres) (*eventStorage, error) {
+func NewEventStorage(base Postgres) (*EventStorage, error) {
 	if base == nil {
 		return nil, errors.New("base is nil")
 	}
-	return &eventStorage{base}, nil
+	return &EventStorage{base}, nil
 }
 
-type eventStorage struct {
+type EventStorage struct {
 	Postgres
 }
 
-func (s *eventStorage) SaveEventTx(tx *sql.Tx, title string, uid int) (int, error) {
+func (s *EventStorage) SaveEventTx(tx *sql.Tx, title string, uid int) (int, error) {
 	const op = "eventStorage.SaveEventTx"
 
 	if tx == nil {
@@ -42,7 +42,7 @@ func (s *eventStorage) SaveEventTx(tx *sql.Tx, title string, uid int) (int, erro
 	return id, nil
 }
 
-func (s *eventStorage) UpdateEventTx(tx *sql.Tx, i *events.Event) error {
+func (s *EventStorage) UpdateEventTx(tx *sql.Tx, i *events.Event) error {
 	const op = "eventStorage.UpdateEventTx"
 
 	if tx == nil {
@@ -56,7 +56,7 @@ func (s *eventStorage) UpdateEventTx(tx *sql.Tx, i *events.Event) error {
 		    is_virtual = $3,
 		    address = $4,
 		    link = $5,
-		    seat_number = $6,
+		    number_of_seats = $6,
 		    start_time = $7,
 		    end_time = $8,
 		    welcome_message = $9,

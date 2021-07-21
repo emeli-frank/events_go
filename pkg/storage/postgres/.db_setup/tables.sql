@@ -16,14 +16,14 @@ CREATE TABLE events
 (
     id SERIAL,
     title VARCHAR(64),
-    description VARCHAR (128),
+    description VARCHAR (512),
     is_virtual BOOLEAN,
     address VARCHAR(128),
     link VARCHAR(128),
-    seat_number INT,
+    number_of_seats INT,
     start_time timestamptz,
     end_time timestamptz,
-    welcome_message text,
+    welcome_message VARCHAR (256),
     is_published BOOLEAN,
     host INT NOT NULL,
 

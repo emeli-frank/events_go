@@ -1,10 +1,10 @@
 package http
 
 import (
-	"fmt"
-	"net/http"
 	errors2 "events/pkg/errors"
 	"events/pkg/events"
+	"fmt"
+	"net/http"
 )
 
 func (a App) recoverPanic(next http.Handler) http.Handler {

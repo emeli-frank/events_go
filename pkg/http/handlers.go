@@ -2,22 +2,28 @@ package http
 
 import (
 	"errors"
+	errors2 "events/pkg/errors"
+	"events/pkg/events"
+	"events/pkg/form"
+	"events/pkg/validation"
 	"fmt"
 	"github.com/golangcollege/sessions"
 	"html/template"
 	"log"
 	"net/http"
 	"path/filepath"
-	errors2 "events/pkg/errors"
-	"events/pkg/events"
 	"runtime/debug"
 	"strconv"
 	"time"
 )
 
-var (
+const (
 	sessionKeyUser  string = "userID"
 	sessionKeyFlash        = "flash"
+)
+
+const (
+	defaultMultipartFormMaxMemory = 32 << 20 // 32 MB
 )
 
 type templateData struct {
@@ -118,17 +124,48 @@ func (a App) showEvents(w http.ResponseWriter, r *http.Request) {
 func (a App) showEventForm(w http.ResponseWriter, r *http.Request) {
 	const op = "http.showEventForm"
 
-	a.render(w, r, "event-form.page.tmpl", nil)
+	a.render(w, r, "create-event.page.tmpl", form.New(r.Form))
 }
 
 func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 	const op = "http.createEvent"
 
-	i, err := eventFromRequest(r)
+	e, err := eventFromRequest(r)
 	if err != nil {
-		// todo:: handle
-		fmt.Println(err)
+		a.clientError(w, http.StatusBadRequest)
+		// todo:: show user a message
+		a.render(w, r, "create-event-page.tmpl", nil)
 		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		// todo:: show form error
+		fmt.Println(err)
+	}
+
+	f := form.New(r.PostForm)
+
+	err = f.ValidateField("title", validation.Required, validation.Length(0, 64)).
+		ValidateField("description", validation.Length(0, 512)).
+		ValidateField("address", validation.Length(0, 128)).
+		ValidateField("link", validation.Length(0, 128)).
+		ValidateField("number_of_seats", validation.InRange(1, 100000)).
+		ValidateField("start_time", events.StartTimeRule(false)).
+		ValidateField("end_time", events.EndTimeRule(e.StartTime, false)).
+		ValidateField("welcome_message", validation.Length(0, 256)).
+		// todo:: validate scope[emails, ""]
+		Error()
+	//fmt.Printf(">>>>>>>>>>>>>>>>>>>>> type: %T, value: %p\n", err, err)
+	if err != nil {
+		if e, ok := err.(form.Error); ok {
+			fmt.Println("form error: ", e.ErrorMessages()) // todo:: handler
+			fmt.Println(f)
+			a.render(w, r, "create-event.page.tmpl", f)
+			return
+		} else {
+			fmt.Println("server errro: ", err) // todo:: handler
+			return
+		}
 	}
 
 	u, ok := events.UserFromContext(r.Context())
@@ -138,9 +175,14 @@ func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = a.EventService.CreateEvent(i, u.ID)
+	_, err = a.EventService.CreateEvent(e, u.ID)
 	if err != nil {
-		a.serverError(w, r, err)
+		if _, ok := err.(validation.Error); ok {
+			fmt.Println("validation error")
+			// todo:: handle, pass back to form
+		}
+		// todo:: handle -> server error
+		fmt.Println(err)
 	}
 
 	http.Redirect(w, r, "/events", http.StatusSeeOther)
@@ -149,24 +191,29 @@ func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 func eventFromRequest(r *http.Request) (*events.Event, error) {
 	const op = "eventFromRequest"
 
-	var id int
 	var err error
-	if idStr := r.FormValue("id"); idStr == "" {
+	err = r.ParseMultipartForm(defaultMultipartFormMaxMemory)
+	if err != nil {
+		return nil, errors2.Wrap(err, op, "parsing form")
+	}
+
+	var id int
+	if idStr := r.PostForm.Get("id"); idStr == "" {
 		id = 0
 	} else {
-		id, err = strconv.Atoi(r.FormValue("id"))
+		id, err = strconv.Atoi(r.PostForm.Get("id"))
 		if err != nil {
 			return nil, errors2.Wrap(err, op, "getting id form value")
 		}
 	}
 
-	tz := r.FormValue("timezone")
+	tz := r.PostForm.Get("timezone")
 	if tz == "" {
-		return nil, errors2.Wrap(err, op, "getting timezone form value")
+		return nil, errors2.Wrap(errors.New("timezone was not set"), op, "getting timezone form value")
 	}
 
 	var startTime *time.Time
-	if startTimeStr := r.FormValue("start_time"); startTimeStr == "" {
+	if startTimeStr := r.PostForm.Get("start_time"); startTimeStr == "" {
 		startTime = nil
 	} else {
 		//t, err := time.Parse(time.RFC3339, startTimeStr)
@@ -185,7 +232,7 @@ func eventFromRequest(r *http.Request) (*events.Event, error) {
 	}
 
 	var endTime *time.Time
-	if endTimeStr := r.FormValue("end_time"); endTimeStr == "" {
+	if endTimeStr := r.PostForm.Get("end_time"); endTimeStr == "" {
 		endTime = nil
 	} else {
 		//t, err := time.Parse(time.RFC3339, endTimeStr)
@@ -204,7 +251,7 @@ func eventFromRequest(r *http.Request) (*events.Event, error) {
 	}
 
 	var isPublished bool
-	isPublishedStr := r.FormValue("is_published")
+	isPublishedStr := r.PostForm.Get("is_published")
 	if isPublishedStr == "true" {
 		isPublished = true
 	} else if isPublishedStr == "false" ||isPublishedStr == "" {
@@ -220,15 +267,15 @@ func eventFromRequest(r *http.Request) (*events.Event, error) {
 
 	return &events.Event{
 		ID:             id,
-		Title:          r.FormValue("title"),
-		Description:    r.FormValue("description"),
+		Title:          r.PostForm.Get("title"),
+		Description:    r.PostForm.Get("description"),
 		IsVirtual:      false,
-		Address:        r.FormValue("address"),
-		Link:           r.FormValue("link"),
+		Address:        r.PostForm.Get("address"),
+		Link:           r.PostForm.Get("link"),
 		NumberOfSeats:  0,
 		StartTime:      startTime,
 		EndTime:        endTime,
-		WelcomeMessage: r.FormValue("welcome_message"),
+		WelcomeMessage: r.PostForm.Get("welcome_message"),
 		IsPublished:    isPublished,
 	}, nil
 }
@@ -300,7 +347,8 @@ func (a App) render(w http.ResponseWriter, r *http.Request, name string, td inte
 	ts, ok := a.TemplateCache[name]
 	if !ok {
 		// todo:: show server error
-		//a.serverError(w, fmt.Errorf("The template %s does not exist", name))
+		fmt.Println(fmt.Errorf("server error: the template %s does not exist", name))
+		//a.serverError(w, r, fmt.Errorf("the template %s does not exist", name))
 		return
 	}
 
@@ -308,6 +356,7 @@ func (a App) render(w http.ResponseWriter, r *http.Request, name string, td inte
 	err := ts.Execute(w, a.addDefaultData(td, r))
 	if err != nil {
 		// todo:: show server error
+		fmt.Println(fmt.Errorf("server error: %v", err))
 		//a.serverError(w, err)
 		return
 	}
