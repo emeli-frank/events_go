@@ -34,6 +34,16 @@ func Value(v interface{}, rules ...Rule) error {
 	return nil
 }
 
+func MergeErrors(errs ...error) error {
+	for _, err := range errs {
+		if err == nil {
+			continue
+		}
+		return err
+	}
+	return nil
+}
+
 func isEmpty(field interface{}) bool {
 	switch f := field.(type) {
 	case string:

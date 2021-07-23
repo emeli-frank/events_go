@@ -1,0 +1,9 @@
+{{template "base" .}}
+
+{{define "title"}}Events detail{{end}}
+
+{{define "body"}}
+    {{.Data.Title}}
+{{end}}
+
+<a href="/events/{{.Data.ID}}/edit">Edit</a>

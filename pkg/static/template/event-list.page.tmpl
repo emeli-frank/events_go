@@ -1,0 +1,11 @@
+{{template "base" .}}
+
+{{define "title"}}Events list{{end}}
+
+{{define "body"}}
+    {{range .Data}}
+    <a href="events/{{.ID}}">{{.Title}}</a>
+    {{else}}
+    <p>No data yet</p>
+    {{end}}
+{{end}}

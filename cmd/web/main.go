@@ -35,7 +35,7 @@ func main() {
 	//session.Lifetime = 5 * time.Second // todo:: remove
 
 	// Initialize a new template cache
-	templateCache, err := http2.NewTemplateCache("./pkg/ui/template/")
+	templateCache, err := http2.NewTemplateCache("./pkg/static/template/")
 	if err != nil {
 		errorLog.Fatal(err)
 	}

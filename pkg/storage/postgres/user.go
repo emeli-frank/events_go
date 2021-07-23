@@ -3,10 +3,10 @@ package postgres
 import (
 	"database/sql"
 	"errors"
-	"fmt"
-	"github.com/lib/pq"
 	errors2 "events/pkg/errors"
 	"events/pkg/events"
+	"fmt"
+	"github.com/lib/pq"
 )
 
 func NewUserStorage(base Postgres) (*userStorage, error) {
@@ -27,10 +27,11 @@ func (s *userStorage) SaveUser(u *events.User, hashedPassword string) (int, erro
 	var id int
 	err := s.DB().QueryRow(query, u.Names, u.Email, hashedPassword).Scan(&id)
 	if err != nil {
-		if err, ok := err.(*pq.Error); ok {
-			// todo:: handle error due to duplicate
-			//if err.Code ==
-			return 0, errors2.Wrap(err, op, "executing query")
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code.Name() {
+			case "foreign_key_violation", "unique_violation":
+				return 0, errors2.Wrap(&events.Conflict{Err: pqErr}, op, "executing query")
+			}
 		}
 		return 0, errors2.Wrap(err, op, "executing query")
 	}

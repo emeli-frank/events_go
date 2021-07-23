@@ -1,31 +1,45 @@
 {{define "form"}}
 <form method="post" enctype="multipart/form-data">
     <input type="text" name="title" placeholder="Title" value='{{.Get "title"}}'>
+    {{with .GetError "title"}}
+    <span class="text-danger">{{.}}</span>
+    {{end}}
     <div>
         Event Description
         <textarea name="description" placeholder="welcome_message">{{.Get "description"}}</textarea>
-        {{.GetError "title"}}
-    </div>
-    Mode
-    <select name="mode">
-        <option
-                value="virtual"
-                {{if eq (.Get "mode") "virtual"}}selected{{end}}>Virtual</option>
-        <option
-                value="physical"
-                {{if eq (.Get "mode") "physical"}}selected{{end}}>Physical</option>
-    </select>
-    <div>
-        Address
-        <textarea name="address" placeholder="address">{{.Get "address"}}</textarea>
+        {{with .GetError "description"}}
+            <span class="text-danger">{{.}}</span>
+        {{end}}
     </div>
     <input type="text" name="link" placeholder="link"  value='{{.Get "link"}}'>
+    {{with .GetError "link"}}
+        <span class="text-danger">{{.}}</span>
+    {{end}}
     <input type="text" name="number_of_seats" placeholder="Number of seats" value='{{.Get "number_of_seats"}}'>
+    {{with .GetError "number_of_seats"}}
+        <span class="text-danger">{{.}}</span>
+    {{end}}
     <input type="datetime-local" name="start_time" placeholder="start_time" value='{{.Get "start_time"}}'>
+    {{with .GetError "start_time"}}
+        <span class="text-danger">{{.}}</span>
+    {{end}}
     <input type="datetime-local" name="end_time" placeholder="end_time" value='{{.Get "end_time"}}'>
+    {{with .GetError "end_time"}}
+        <span class="text-danger">{{.}}</span>
+    {{end}}
+    <div>
+        Welcome message
+        <textarea name="invitations" placeholder="Email (CSV)">{{.Get "invitations"}}</textarea>
+        {{with .GetError "invitations"}}
+        <span class="text-danger">{{.}}</span>
+        {{end}}
+    </div>
     <div>
         Welcome message
         <textarea name="welcome_message" placeholder="welcome_message">{{.Get "welcome_message"}}</textarea>
+        {{with .GetError "welcome_message"}}
+        <span class="text-danger">{{.}}</span>
+        {{end}}
     </div>
 
     <div>

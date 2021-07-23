@@ -8,6 +8,7 @@ import (
 	"events/pkg/validation"
 	"fmt"
 	"github.com/golangcollege/sessions"
+	"github.com/gorilla/mux"
 	"html/template"
 	"log"
 	"net/http"
@@ -92,7 +93,7 @@ func (a App) login(w http.ResponseWriter, r *http.Request) {
 	// check if email and password match
 	match, uid, err := a.UserService.EmailMatchPassword(email, password)
 	if err != nil {
-		fmt.Println(err)
+		a.serverError(w, r, err)
 		// todo:: handle error
 		return
 	} else if !match {
@@ -118,11 +119,54 @@ func (a *App) logoutUser(w http.ResponseWriter, r *http.Request) {
 func (a App) showEvents(w http.ResponseWriter, r *http.Request) {
 	const op = "http.showEvents"
 
-	a.render(w, r, "events.page.tmpl", nil)
+	u, ok := events.UserFromContext(r.Context())
+	if !ok {
+		a.serverError(w, r, errors.New("couldn't get user from request context"))
+		return
+	}
+
+	ee, err := a.EventService.Events(u.ID)
+	if err != nil {
+		a.serverError(w, r, err)
+		return
+	}
+
+	a.render(w, r, "event-list.page.tmpl", ee)
 }
 
-func (a App) showEventForm(w http.ResponseWriter, r *http.Request) {
-	const op = "http.showEventForm"
+func (a App) showEvent(w http.ResponseWriter, r *http.Request) {
+	const op = "http.showEvent"
+
+	id, err := strconv.Atoi(mux.Vars(r)["eventID"])
+	if err != nil {
+		a.serverError(w, r, err)
+		return
+	}
+
+	u, ok := events.UserFromContext(r.Context())
+	if !ok {
+		a.serverError(w, r, errors.New("couldn't get user from request context"))
+		return
+	}
+
+	e, err := a.EventService.Event(id)
+	if err != nil {
+		if _, ok := errors2.Unwrap(err).(*events.NotFound); ok {
+			a.notFound(w, r)
+			return
+		}
+		a.serverError(w, r, err)
+		return
+	} else if e.HostID != u.ID {
+		a.notFound(w, r)
+		return
+	}
+
+	a.render(w, r, "event-detail.page.tmpl", e)
+}
+
+func (a App) showEventCreationForm(w http.ResponseWriter, r *http.Request) {
+	const op = "http.showEventCreationForm"
 
 	a.render(w, r, "create-event.page.tmpl", form.New(r.Form))
 }
@@ -141,6 +185,7 @@ func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		// todo:: show form error
 		fmt.Println(err)
+		a.serverError(w, r, err)
 	}
 
 	f := form.New(r.PostForm)
@@ -149,7 +194,7 @@ func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 		ValidateField("description", validation.Length(0, 512)).
 		ValidateField("address", validation.Length(0, 128)).
 		ValidateField("link", validation.Length(0, 128)).
-		ValidateField("number_of_seats", validation.InRange(1, 100000)).
+		ValidateField("number_of_seats", validation.Length(2, 2 << 16)).
 		ValidateField("start_time", events.StartTimeRule(false)).
 		ValidateField("end_time", events.EndTimeRule(e.StartTime, false)).
 		ValidateField("welcome_message", validation.Length(0, 256)).
@@ -163,15 +208,80 @@ func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 			a.render(w, r, "create-event.page.tmpl", f)
 			return
 		} else {
-			fmt.Println("server errro: ", err) // todo:: handler
+			a.serverError(w, r, err)
 			return
 		}
 	}
 
 	u, ok := events.UserFromContext(r.Context())
 	if !ok {
-		// todo:: handle -> server error
+		a.serverError(w, r, errors.New("could not get user from context"))
+		return
+	}
+
+	_, err = a.EventService.CreateEvent(e, u.ID)
+	if err != nil {
+		if _, ok := err.(validation.Error); ok {
+			fmt.Println("validation error")
+			// todo:: handle, pass back to form
+		}
+		a.serverError(w, r, err)
+		return
+	}
+
+	http.Redirect(w, r, "/events", http.StatusSeeOther)
+}
+
+func (a App) showEventEditForm(w http.ResponseWriter, r *http.Request) {
+	const op = "http.showEventEditForm"
+
+	a.render(w, r, "edit-event.page.tmpl", form.New(r.Form))
+}
+
+func (a App) editEvent(w http.ResponseWriter, r *http.Request) {
+	const op = "http.editEvent"
+
+	e, err := eventFromRequest(r)
+	if err != nil {
+		a.clientError(w, http.StatusBadRequest)
+		// todo:: show user a message
+		a.render(w, r, "edit-event-page.tmpl", nil)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		// todo:: show form error
 		fmt.Println(err)
+	}
+
+	f := form.New(r.PostForm)
+
+	err = f.ValidateField("title", validation.Required, validation.Length(0, 64)).
+		ValidateField("description", validation.Length(0, 512)).
+		ValidateField("address", validation.Length(0, 128)).
+		ValidateField("link", validation.Length(0, 128)).
+		ValidateField("number_of_seats", validation.Length(2, 2 << 16)).
+		ValidateField("start_time", events.StartTimeRule(false)).
+		ValidateField("end_time", events.EndTimeRule(e.StartTime, false)).
+		ValidateField("welcome_message", validation.Length(0, 256)).
+		// todo:: validate scope[emails, ""]
+		Error()
+	//fmt.Printf(">>>>>>>>>>>>>>>>>>>>> type: %T, value: %p\n", err, err)
+	if err != nil {
+		if e, ok := err.(form.Error); ok {
+			fmt.Println("form error: ", e.ErrorMessages()) // todo:: handler
+			fmt.Println(f)
+			a.render(w, r, "create-event.page.tmpl", f)
+			return
+		} else {
+			a.serverError(w, r, err)
+			return
+		}
+	}
+
+	u, ok := events.UserFromContext(r.Context())
+	if !ok {
+		a.serverError(w, r, err)
 		return
 	}
 
@@ -186,6 +296,40 @@ func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/events", http.StatusSeeOther)
+}
+
+func (a App) publishEvent(w http.ResponseWriter, r *http.Request) {
+	const op = "http.publishEvent"
+
+	id, err := strconv.Atoi(mux.Vars(r)["eventID"])
+	if err != nil {
+		a.serverError(w, r, err)
+		return
+	}
+
+	u, ok := events.UserFromContext(r.Context())
+	if !ok {
+		a.serverError(w, r, errors.New("could not get user from request context"))
+	}
+
+	err = a.EventService.PublishEvent(id, u.ID)
+	if err != nil {
+		if _, ok := err.(validation.Error); ok {
+			a.Session.Put(r, sessionKeyFlash,
+				"Form could not be published. Please complete the form and try again")
+			http.Redirect(w, r, "/events/edit/", http.StatusSeeOther)
+			return
+		}
+	}
+
+	http.Redirect(w, r, "/events", http.StatusSeeOther)
+}
+
+func (a App) test(w http.ResponseWriter, r *http.Request) {
+	const op = "http.test"
+
+	a.serverError(w, r, errors.New("something very bad"))
+	return
 }
 
 func eventFromRequest(r *http.Request) (*events.Event, error) {
@@ -270,7 +414,6 @@ func eventFromRequest(r *http.Request) (*events.Event, error) {
 		Title:          r.PostForm.Get("title"),
 		Description:    r.PostForm.Get("description"),
 		IsVirtual:      false,
-		Address:        r.PostForm.Get("address"),
 		Link:           r.PostForm.Get("link"),
 		NumberOfSeats:  0,
 		StartTime:      startTime,
@@ -280,7 +423,7 @@ func eventFromRequest(r *http.Request) (*events.Event, error) {
 	}, nil
 }
 
-func (a *App) notFoundHandler(w http.ResponseWriter, r *http.Request) {
+func (a *App) notFound(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	a.render(w, r, "404.page.tmpl", nil)
 }

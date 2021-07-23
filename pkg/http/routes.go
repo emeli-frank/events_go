@@ -20,13 +20,19 @@ func (a App) Routes() http.Handler {
 	r.Handle("/login", dynamicMiddleware.Then(http.HandlerFunc(a.login))).Methods("POST")
 	r.Handle("/logout", dynamicMiddleware.Then(http.HandlerFunc(a.logoutUser))).Methods("GET")
 	r.Handle("/events", authenticatedOnly.Then(http.HandlerFunc(a.showEvents))).Methods("GET")
-	r.Handle("/events/create", authenticatedOnly.Then(http.HandlerFunc(a.showEventForm))).Methods("GET")
+	r.Handle("/events/{eventID:[0-9]+}", authenticatedOnly.Then(http.HandlerFunc(a.showEvent))).Methods("GET")
+	r.Handle("/events/create", authenticatedOnly.Then(http.HandlerFunc(a.showEventCreationForm))).Methods("GET")
 	r.Handle("/events/create", authenticatedOnly.Then(http.HandlerFunc(a.createEvent))).Methods("POST")
+	r.Handle("/events/{eventID:[0-9]+}/edit", authenticatedOnly.Then(http.HandlerFunc(a.showEventEditForm))).Methods("GET")
+	r.Handle("/events/{eventID:[0-9]+}/edit", authenticatedOnly.Then(http.HandlerFunc(a.test))).Methods("POST")
 
-	r.NotFoundHandler = dynamicMiddleware.Then(http.HandlerFunc(a.notFoundHandler))
+	r.NotFoundHandler = dynamicMiddleware.Then(http.HandlerFunc(a.notFound))
 
 	// file route
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./pkg/ui/static"))))
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./pkg/static"))))
+
+	// test path
+	r.Handle("/test", dynamicMiddleware.Then(http.HandlerFunc(a.test))).Methods("GET")
 
 	return standardMiddleWare.Then(r)
 }
