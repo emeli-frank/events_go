@@ -1,0 +1,97 @@
+@use "sass:math";
+@use "sass:map";
+@use "../lib/base/colors";
+
+.hero {
+  height: 500px;
+  background-image: url("/static/img/balloons.jpg");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      background: black;
+      opacity: .5;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+
+    .hero-container {
+      color: #ffffff;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+
+      h1 {
+        font-size: 3rem;
+        font-weight: 600;
+      }
+
+      .divider {
+        height: 2px;
+        background-color: #ffffff;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      p {
+        text-align: end;
+        width: 68%;
+        align-self: flex-end;
+      }
+    }
+}
+
+.cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0;
+
+  p {
+    font-size: 1.8rem;
+  }
+
+  button {
+
+  }
+}
+
+.sections {
+  & > *:nth-child(even) {
+    background-color: map.get(colors.$palette-gray, 50);
+  }
+
+  section {
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+
+    figure {
+      width: 40%;
+      margin-left: auto;
+      margin-right: auto;
+      img {
+        width: 100%;
+      }
+    }
+
+    h2 {
+      font-size: 24px;
+      text-align: center;
+      margin-bottom: .8rem;
+    }
+
+    .subtitle {
+      color: map.get(colors.$palette-gray, 500);
+      text-align: center;
+    }
+  }
+}

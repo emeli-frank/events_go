@@ -1,0 +1,27 @@
+html {
+	box-sizing: border-box;
+	height: 100%;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+div, section {
+	margin: 0px;
+	padding: 0px;
+}
+
+body {
+	width: 100%;
+	margin: 0px;
+	word-break: break-word;
+	margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+

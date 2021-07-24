@@ -1,0 +1,147 @@
+@use "sass:math";
+@use "sass:map";
+@use "lib/main";
+@use "lib/base/colors";
+@use "pages/home";
+@use "modules/footer";
+
+header {
+  height: 56px;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.17);
+  padding: .5rem;
+
+  .close-button {
+    align-self: flex-end;
+  }
+
+  .app-name {
+    font-size: 1.3rem;
+    font-weight: 500;
+    margin-left: .8rem;
+    color: map.get(colors.$palette-primary, 500);
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  nav {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #ffffff;
+    flex-direction: column;
+    padding: .6rem;
+    display: none;
+    z-index: 1000;
+
+    &.open-sm {
+      display: flex;
+    }
+
+    .user {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 1rem;
+
+      .image {
+        $size: 48;
+
+        width: $size * 1px;
+        height: $size * 1px;
+        border-radius: math.div($size, 2) * 1px;
+      }
+
+      .name {
+        font-size: 1.5rem;
+        font-weight: 500;
+        margin-top: .5rem;
+        color: map.get(colors.$palette-gray, 500);
+      }
+
+      .search-button {
+
+      }
+    }
+
+    .nav-items {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-grow: 1;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+
+      & > * {
+        margin-top: .3rem;
+        margin-bottom: .3rem;
+      }
+
+      a {
+        text-decoration: none;
+        font-size: 2rem;
+        font-weight: 600;
+        color: map.get(colors.$palette-primary, 500) !important;
+      }
+    }
+  }
+
+  .tools {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+
+    #avatar-button {
+      overflow: hidden;
+      width: 38px;
+      height: 38px;
+      border-right: 19px;
+      cursor: pointer;
+
+      img {
+        width: 100%;
+      }
+    }
+  }
+}
+
+.icon-button {
+  $size: 48;
+
+  border: none;
+  width: $size * 1px;
+  height: $size * 1px;
+  border-radius: math.div($size, 2) * 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+
+  &:hover {
+    background-color: map.get(colors.$palette-gray, 50);
+  }
+
+  &:active {
+    background-color: map.get(colors.$palette-gray, 100);
+  }
+}
+
+.toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+
+  & > * {
+    background-color: map.get(colors.$palette-primary, 500);
+    color: #ffffff;
+  }
+}

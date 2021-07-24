@@ -1,0 +1,51 @@
+@use '../utils/mixins';
+@use '../config/colors';
+@use 'sass:map';
+
+.noselect {
+	@include mixins.disable-text-selection();
+}
+
+// cursor
+.cursor-pointer {
+    cursor: pointer;
+}
+
+// anchor element
+.anchor-reset {
+    text-decoration: none;
+    color: inherit;
+}
+
+// text
+.ellipsized {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.ellipsized-line-2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.ellipsized-line-3 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+.interactable {
+    cursor: pointer;
+    &:hover {
+        background-color: map.get(colors.$palette-gray, 50);
+    }
+    &:focus, &:active {
+        background-color: map.get(colors.$palette-gray, 100);
+    }
+}

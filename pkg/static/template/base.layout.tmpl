@@ -6,44 +6,70 @@
     <title>{{template "title" .}} - Events</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!--    <link rel="icon" type="image/x-icon" href="favicon.ico">-->
-    <!--    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500&display=swap" rel="stylesheet">-->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
           rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
           crossorigin="anonymous">
+    <link href="/static/style/css/main.css" rel="stylesheet">
 </head>
 <body class="mat-typography mat-app-background">
-    <ul>
-        <li>
-            <a href="/">Home</a>
-        </li>
-        {{if not .User}}
-        <li>
-            <a href="/login">Login</a>
-        </li>
-        <li>
-            <a href="/register">Sign up</a>
-        </li>
-        {{end}}
-        {{if .User}}
-        <li>
-            <a href="/events">Events</a>
-        </li>
-        <li>
-            <a href="/events/create">Create event</a>
-        </li>
-        <li>
-            <a href="/logout">Logout</a>
-        </li>
-        {{end}}
-    </ul>
-
-    {{if .User}}
-    <div>{{.User.Names}}</div>
-    {{end}}
+    <header>
+        <button id="menu-open-button" class="icon-button"><span class="material-icons">menu</span></button>
+        <a href="/" class="app-name">Events</a>
+        <nav id="nav">
+            <button id="menu-close-button" class="icon-button close-button"><span class="material-icons menu-icon">close</span></button>
+            {{with .User}}
+            <div class="user">
+                <img src="/static/img/sample-image.jpg" alt="{{.Names}}" class="image">
+                <div class="name">{{.Names}}</div>
+            </div>
+            {{end}}
+            <ul class="nav-items">
+                <li>
+                    <a href="/">Home</a>
+                </li>
+                {{if not .User}}
+                <li>
+                    <a href="/login">Login</a>
+                </li>
+                <li>
+                    <a href="/register">Sign up</a>
+                </li>
+                {{end}}
+                {{if .User}}
+                <li>
+                    <a href="/events">Events</a>
+                </li>
+                <li>
+                    <a href="/events/create">Create event</a>
+                </li>
+                <li>
+                    <a href="/logout">Logout</a>
+                </li>
+                {{end}}
+            </ul>
+        </nav>
+        <div class="tools">
+            <button id="search-button" class="icon-button"><span class="material-icons menu-icon">search</span></button>
+            {{with .User}}
+            <div id="avatar-button" class="icon-button">
+                <img src="/static/img/sample-image.jpg" alt="{{.Names}}" class="image">
+            </div>
+            {{end}}
+        </div>
+    </header>
 
     {{with .Flash}}
-    <div class='flash'>{{.}}</div>
+    <div class="toast-container">
+        <div class="toast align-items-center" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    {{.}}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
     {{end}}
 
     <main>
@@ -57,6 +83,33 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js"
             integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF"
             crossorigin="anonymous"></script>
+
+
+    <script>
+        let openBtn = document.querySelector('#menu-open-button');
+        let closeBtn = document.querySelector('#menu-close-button');
+        let nav = document.querySelector('#nav');
+
+        openBtn.addEventListener('click', function () {
+            nav.classList.add('open-sm');
+        });
+
+        closeBtn.addEventListener('click', function () {
+            nav.classList.remove('open-sm')
+        });
+
+        function initToasts() {
+            var toastElList = [].slice.call(document.querySelectorAll('.toast'))
+            var toastList = toastElList.map(function(toastEl) {
+                // Creates an array of toasts (it only initializes them)
+                return new bootstrap.Toast(toastEl) // No need for options; use the default options
+            });
+            toastList.forEach(toast => toast.show()); // This show them
+
+            console.log(toastList); // Testing to see if it works
+        };
+        initToasts();
+    </script>
 </body>
 </html>
 {{end}}

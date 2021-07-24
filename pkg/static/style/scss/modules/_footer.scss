@@ -1,0 +1,55 @@
+@use "sass:math";
+@use "sass:map";
+@use "../lib/base/colors";
+
+footer {
+  margin-top: 56px;
+  font-size: 12px;
+  background-color: #32333F;
+  text-align: center;
+  padding: 4rem 0;
+
+  & > * {
+    display: block;
+    margin-bottom: 1rem !important;
+  }
+
+  *, a{
+    color: #818999;
+  }
+
+  .affiliation {
+    display: flex;
+    flex-direction: column;
+
+    & > *:first-child {
+      color: #A5A8AF;
+      font-weight: 600;
+      font-size: 14px;
+    }
+  }
+
+  .contact-icons {
+    display: flex;
+    justify-content: center;
+
+    & > * {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      transition: transform 300ms ease-in;
+
+      &:hover {
+        transform: scale(1.1);
+      }
+    }
+
+    & > *:not(:last-child) {
+      margin-right: 1.2rem;
+    }
+  }
+
+  a:hover {
+    color: #BBBDC0 !important;
+  }
+}

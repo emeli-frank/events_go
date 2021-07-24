@@ -1,0 +1,25 @@
+@use '../config/colors';
+
+@mixin generate-bg-color($palette, $name) {
+	@each $key, $value in $palette {
+		@if (type-of($value) == color) {
+			.bg-#{$name}-#{$key} {
+				background-color: $value;
+			}
+		}
+	
+		@if (type-of($value) == color and $key == 500) {
+			.bg-#{$name} {
+				background-color: $value;
+			}
+		}
+	}
+}
+
+@include generate-bg-color(colors.$palette-gray, "gray");
+
+@include generate-bg-color(colors.$palette-primary, "primary");
+
+@include generate-bg-color(colors.$palette-accent, "accent");
+
+@include generate-bg-color(colors.$palette-warn, "warn");

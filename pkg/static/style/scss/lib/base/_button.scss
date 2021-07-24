@@ -1,0 +1,86 @@
+// reset button style
+@mixin override-style {
+    font-size: 100%;
+    font-family: inherit;
+    border: none;
+    padding: 0;
+    margin: 0;
+    background-color: unset;
+    outline: none;
+    width: auto;
+    overflow: visible;
+
+    /* inherit font & color from ancestor */
+    color: inherit;
+    font: inherit;
+
+    /* Normalize `line-height`. Cannot be changed from `normal` in Firefox 4+. */
+    line-height: normal;
+
+    /* Corrects font smoothing for webkit */
+    -webkit-font-smoothing: inherit;
+    -moz-osx-font-smoothing: inherit;
+
+    /* Corrects inability to style clickable `input` types in iOS */
+    -webkit-appearance: none;
+}
+
+.button-group {
+    display: flex;
+    flex-wrap: wrap;
+
+    & > * {
+        margin-right: .4rem !important;
+        margin-left: .4rem !important;
+    }
+
+    & > *:first-child {
+        margin-left: 0 !important;
+    }
+
+    & > *:last-child {
+        margin-right: 0 !important;
+    }
+
+    &.align-end {
+        justify-content: flex-end;
+    }
+
+    &.align-center {
+        justify-content: center;
+    }
+
+    &.vertical {
+        flex-direction: column;
+        align-items: center;
+
+        & > * {
+            margin-right: 0 !important;
+            margin-left: 0 !important;
+        }
+
+        & > * {
+            margin-top: .4rem !important;
+            margin-bottom: .4rem !important;
+        }
+    
+        & > *:first-child {
+            margin-top: 0 !important;
+        }
+    
+        & > *:last-child {
+            margin-bottom: 0 !important;
+        }
+    }
+}
+
+.button-wide {
+    width: 280px;
+    height: 40px;
+    border-radius: 10px !important;
+}
+
+.button-w-full {
+    width: 100%;
+    height: 48px;
+}

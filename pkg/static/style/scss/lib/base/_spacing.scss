@@ -1,0 +1,74 @@
+@use '../config/breakpoints';
+
+// spacer (to comply with tailwind css)
+$spacer: 1rem;
+$spacers: (
+  0: 0,
+  // 0.5: ($spacer * .125),
+  1: ($spacer * .25),
+  // 1.5: ($spacer * .375),
+  2: ($spacer * .5),
+  // 2.5: ($spacer * .625),
+  3: ($spacer * .75),
+  // 3.5: ($spacer * 0.875),
+  4: ($spacer * 1),
+  5: ($spacer * 1.25),
+  6: ($spacer * 1.5),
+  7: ($spacer * 1.75),
+  8: ($spacer * 2),
+  9: ($spacer * 2.25),
+  10: ($spacer * 2.5),
+  16: ($spacer * 4),
+  24: ($spacer * 6),
+);
+
+// padding 2
+@each $key, $value in $spacers {
+  @each $pos in top, left, bottom, right {
+    
+    .p#{str-slice($pos, 1, 1)}-#{$key} {
+      padding-#{$pos}: $value;
+    }
+    
+  }
+    
+  .py-#{$key} {
+    padding-top: $value;
+    padding-bottom: $value;
+  }
+  
+  .px-#{$key} {
+    padding-left: $value;
+    padding-right: $value;
+  }
+}
+
+// margin 2
+@each $key, $value in $spacers {
+  @each $pos in top, left, bottom, right {
+    
+    .m#{str-slice($pos, 1, 1)}-#{$key} {
+      margin-#{$pos}: $value;
+    }
+    
+  }
+    
+  .my-#{$key} {
+    margin-top: $value;
+    margin-bottom: $value;
+  }
+  
+  .mx-#{$key} {
+    margin-left: $value;
+    margin-right: $value;
+  }
+}
+
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ml-auto { margin-left: auto; }
+
+.mr-auto { margin-left: auto; }
