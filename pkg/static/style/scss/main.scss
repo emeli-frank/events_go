@@ -3,7 +3,27 @@
 @use "lib/main";
 @use "lib/base/colors";
 @use "pages/home";
+@use "pages/event-list";
 @use "modules/footer";
+
+.pt-page { padding-top: 2rem; }
+
+.pb-page { padding-bottom: 3rem; }
+
+.py-page {
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+}
+
+.px-page {
+  padding-left: 3rem;
+  padding-right: 3rem;
+}
+
+.text-title {
+  color: map.get(colors.$palette-primary, 500);
+  margin-bottom: 1rem;
+}
 
 header {
   height: 56px;

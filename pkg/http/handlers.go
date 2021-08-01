@@ -498,7 +498,7 @@ func (a App) render(w http.ResponseWriter, r *http.Request, name string, td inte
 	// Execute the template set, passing in any dynamic data.
 	err := ts.Execute(w, a.addDefaultData(td, r))
 	if err != nil {
-		// todo:: show server error
+		a.serverError(w, r, err)
 		fmt.Println(fmt.Errorf("server error: %v", err))
 		//a.serverError(w, err)
 		return
@@ -517,10 +517,10 @@ func humanDate(t time.Time) string {
 		return ""
 	}
 
-	return t.UTC().Format("02 Jan 2006 at 15:04")
+	return t.UTC().Format("02 Jan 2006, 15:04")
 }
 
-func (a *App) addDefaultData(data interface{}, r *http.Request) interface{} {
+func (a *App) addDefaultData(data interface{}, r *http.Request) *templateData {
 	u, _ := events.UserFromContext(r.Context())
 
 	td := &templateData{

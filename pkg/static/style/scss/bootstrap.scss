@@ -1,0 +1,18 @@
+@use "sass:map";
+
+@use "../scss/lib/base/colors";
+
+$primary: map.get(colors.$palette-primary, 500);
+
+/* .btn-outline-primary {
+    $color: map.get(colors.$palette-primary, 500);
+    @include buttons.button-outline-variant($color, $color, lighten($color,5%), $color);
+} */
+@import "bootstrap-5/bootstrap.scss";
+
+.btn-primary:hover,
+.btn-primary:active,
+.btn-primary:visited,
+.btn-primary:focus {
+  color: #ffffff !important;
+}

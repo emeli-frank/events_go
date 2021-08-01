@@ -35,7 +35,7 @@ func (a App) authenticatedUser(next http.Handler) http.Handler {
 
 	f := func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := events.UserFromContext(r.Context()); !ok {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			http.Redirect(w, r, "/login", http.StatusUnauthorized)
 			return
 		}
 

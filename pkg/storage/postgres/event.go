@@ -24,12 +24,12 @@ type EventStorage struct {
 func (s *EventStorage) Event(id int) (*events.Event, error) {
 	const op = "eventStorage.Event"
 
-	query := fmt.Sprintf("SELECT id, title FROM events WHERE id = %d", id)
+	query := fmt.Sprintf("SELECT id, title, host_id FROM events WHERE id = %d", id)
 
 	row := s.DB().QueryRow(query)
 
 	var e events.Event
-	err := row.Scan(&e.ID, &e.Title)
+	err := row.Scan(&e.ID, &e.Title, &e.HostID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors2.Wrap(&events.NotFound{Err: err}, op, "scanning into var")
@@ -43,7 +43,7 @@ func (s *EventStorage) Event(id int) (*events.Event, error) {
 func (s *EventStorage) Events(uid int) ([]events.Event, error) {
 	const op = "eventStorage.Events"
 
-	query := fmt.Sprintf("SELECT id, title FROM events WHERE host_id = %d", uid)
+	query := fmt.Sprintf("SELECT id, title, end_time FROM events WHERE host_id = %d", uid)
 
 	rows, err := s.DB().Query(query)
 	if err != nil {
@@ -54,7 +54,7 @@ func (s *EventStorage) Events(uid int) ([]events.Event, error) {
 	var ee []events.Event
 	for rows.Next() {
 		var e events.Event
-		err = rows.Scan(&e.ID, &e.Title)
+		err = rows.Scan(&e.ID, &e.Title, &e.EndTime)
 		if err != nil {
 			return nil, errors2.Wrap(err, op, "scanning into a var")
 		}

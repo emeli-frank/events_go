@@ -3,9 +3,34 @@
 {{define "title"}}Events list{{end}}
 
 {{define "body"}}
-    {{range .Data}}
-    <a href="events/{{.ID}}">{{.Title}}</a>
+<div class="container py-page">
+    <h1 class="text-title">Events</h1>
+
+    {{with .Data}}
+    <div class="event-lists">
+        {{range .}}
+        <a href="events/{{.ID}}" class="event-list">
+            <figure></figure>
+            <div class="detail">
+                <div class="title">{{.Title}}</div>
+                <div class="description">Lorem ipsum lorem impsum lorem impsum lorem impsum lorem impsum lorem impsum.</div>
+                <div class="action-group">
+                    <div class="action">
+                    {{with .EndTime}}
+                        <span class="material-icons action-icon">timer_off</span></button>
+                        <span class="action-label">{{humanDate .}}</span>
+                    {{else}}
+                        <span class="material-icons action-icon">timer_off</span></button>
+                        <i class="action-label">(not set)</i>
+                    {{end}}
+                    </div>
+                </div>
+            </div>
+        </a>
+        {{end}}
+    </div>
     {{else}}
-    <p>No data yet</p>
+    <p>There are no events to display.</p>
     {{end}}
+</div>
 {{end}}

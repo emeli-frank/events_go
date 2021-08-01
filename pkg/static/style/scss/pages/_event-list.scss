@@ -1,0 +1,67 @@
+@use "sass:map";
+@use "../lib/base/colors";
+
+.event-lists {
+    & > * {
+        margin-bottom: 1rem;
+    }
+
+    .event-list {
+        text-decoration: none;
+        display: flex;
+        border-radius: 5px;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        margin-left: auto;
+        margin-right: auto;
+        overflow: hidden;
+
+        figure {
+            width: 30%;
+            background-image: url("/static/img/mock-images/birthday.jpg");
+            background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
+            flex-shrink: 0;
+            margin: 0;
+        }
+
+        .detail {
+            padding: .7rem 1.4rem;
+
+            & > * {
+                color: map.get(colors.$palette-gray, 500);
+            }
+        }
+
+        .title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: map.get(colors.$palette-primary, 500);
+            margin-bottom: .7rem;
+        }
+
+        .action-group {
+            display: flex;
+            color: map.get(colors.$palette-primary, 500);
+        
+            &  > * {
+                margin-top: 1.2rem;
+                margin-right: .7rem;
+            }
+        
+            .action {
+                display: flex;
+                align-items: center;
+        
+                .action-icon {
+                    margin-right: .3rem;
+                    font-size: 1rem;
+                }
+                
+                .action-label {
+                    font-size: .7rem;
+                }
+            }
+        }
+    }
+}
