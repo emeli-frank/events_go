@@ -3,7 +3,82 @@
 {{define "title"}}Events detail{{end}}
 
 {{define "body"}}
-    {{.Data.Title}}
-{{end}}
+    {{with .Data.Event}}
+    <div class="event-detail pb-page">
+        <div class="hero-image" style="background-image:
+                        url('{{with .CoverImagePath}} /{{$.Data.ImageBaseURL}}/{{.}} {{else}} /static/img/img-upload-placeholder.jpg {{end}}')"></div>
 
-<a href="/events/{{.Data.ID}}/edit">Edit</a>
+        <div class="actions px-page my-4">
+            <a href="/events/{{.ID}}/edit"  class="icon-button">
+                <span class="material-icons">edit</span>
+            </a>
+
+            <div class="icon-button delete">
+                <span class="material-icons">delete_outline</span>
+            </div>
+        </div>
+
+        <section class="event-tiles px-page">
+            <div class="event-tile">
+                <span class="material-icons icon">info_outline</span>
+                <div class="detail">
+                {{with .Description}}
+                    {{.}}
+                {{else}}
+                    <span class="not-set">(Not set)</span>
+                {{end}}
+                </div>
+            </div>
+
+            <div class="event-tile">
+                <span class="material-icons icon">public</span>
+                <div class="detail">
+                    {{with .Link}}
+                    {{.}}
+                    {{else}}
+                    <span class="not-set">(Not set)</span>
+                    {{end}}
+                </div>
+            </div>
+
+            <div class="event-tile">
+                <span class="material-icons icon">timer</span>
+                <div class="detail">
+                    {{with .StartTime}}
+                    {{humanDate .}}
+                    {{else}}
+                    <span class="not-set">(Not set)</span>
+                    {{end}}
+                </div>
+            </div>
+
+            <div class="event-tile">
+                <span class="material-icons icon">timer_off</span>
+                <div class="detail">
+                    {{with .EndTime}}
+                    {{humanDate .}}
+                    {{else}}
+                    <span class="not-set">(Not set)</span>
+                    {{end}}
+                </div>
+            </div>
+
+            <div class="event-tile">
+                <span class="material-icons icon">favorite</span>
+                <div class="detail">
+                    {{with .WelcomeMessage}}
+                    {{.}}
+                    {{else}}
+                    <span class="not-set">(Not set)</span>
+                    {{end}}
+                </div>
+            </div>
+        </section>
+
+        <div class="button-group align-end px-page mt-16">
+            <button class="btn">Responses</button>
+            <button class="btn btn-primary">Publish</button>
+        </div>
+    </div>
+    {{end}}
+{{end}}

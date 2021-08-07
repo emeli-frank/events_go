@@ -1,0 +1,48 @@
+@use "sass:map";
+@use "../lib/base/colors";
+
+.event-detail {
+  .hero-image {
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    height: 180px;
+  }
+
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+
+    & > *:not(:first-child) {
+      margin-left: .5rem;
+    }
+
+    & > *.delete {
+      color: red;
+      background-color: rgba(225, 0, 0, .04);
+    }
+  }
+
+  .event-tiles {
+    & > *:not(:last-child) {
+        margin-bottom: 2.5rem;
+    }
+
+    .event-tile {
+      display: flex;
+
+      .icon {
+        flex-grow: 0;
+        flex-shrink: 0;
+      }
+
+      .detail {
+        margin-left: 1.5rem;
+      }
+    }
+  }
+
+  .not-set {
+    color: map.get(colors.$palette-gray, 400);
+  }
+}

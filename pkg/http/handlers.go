@@ -133,7 +133,10 @@ func (a App) showEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a.render(w, r, "event-list.page.tmpl", ee)
+	a.render(w, r, "event-list.page.tmpl", struct {
+		Events []events.Event
+		ImageBaseURL string
+	}{ee, a.UploadDir})
 }
 
 func (a App) showEvent(w http.ResponseWriter, r *http.Request) {
@@ -164,7 +167,10 @@ func (a App) showEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a.render(w, r, "event-detail.page.tmpl", e)
+	a.render(w, r, "event-detail.page.tmpl", struct {
+		Event *events.Event
+		ImageBaseURL string
+	}{e, a.UploadDir})
 }
 
 func (a App) showEventCreationForm(w http.ResponseWriter, r *http.Request) {
@@ -267,7 +273,8 @@ func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 		// todo:: use something more secure. Look for a lib that can do this.
 		ext, err = fileExt(handler.Header.Get("Content-Type"))
 		if err != nil {
-			a.serverError(w, r, err)
+			a.Session.Put(r, sessionKeyFlash, "Unsupported file type uploaded")
+			a.render(w, r, "create-event.page.tmpl", nil) // todo:: add data
 			return
 		}
 
@@ -536,8 +543,8 @@ func fileExt(mime string) (string, error) {
 	switch mime {
 	case "image/jpeg":
 		return "jpg", nil
-	case "application/pdf":
-		return "pdf", nil
+	case "image/png":
+		return "png", nil
 	default:
 		return "", errors.New("unexpected mime type")
 	}

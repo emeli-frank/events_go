@@ -20,7 +20,7 @@ func main() {
 	addr := flag.String("addr", ":5000", "HTTP network address")
 	sessionKey := flag.String("sessionKey", "s6Ndh+pPbnzHbS*+9Pk8qGWhTzbpa@ge", "Session key")
 	dsn := flag.String("dsn", "host=localhost port=5432 user=events password=password dbname=events sslmode=disable", "Postgresql database connection info")
-	uploadDir := flag.String("uploadDir", "../uploads", "File upload directory")
+	uploadDir := flag.String("uploadDir", "../uploads", "File upload directory") // todo:: consider using absolute path
 	flag.Parse()
 
 	//infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
@@ -71,7 +71,7 @@ func main() {
 		UploadDir: *uploadDir,
 	}
 
-	router := app.Routes()
+	router := app.Routes(*uploadDir)
 
 	srv := &http.Server{
 		Addr: *addr,

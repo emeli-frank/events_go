@@ -1561,7 +1561,6 @@ body {
 }
 .event-lists .event-list figure {
   width: 30%;
-  background-image: url("/static/img/mock-images/birthday.jpg");
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -1602,6 +1601,40 @@ body {
 
 form > *:not(last-child) {
   margin-bottom: 1.5rem;
+}
+
+.event-detail .hero-image {
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  height: 180px;
+}
+.event-detail .actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.event-detail .actions > *:not(:first-child) {
+  margin-left: 0.5rem;
+}
+.event-detail .actions > *.delete {
+  color: red;
+  background-color: rgba(225, 0, 0, 0.04);
+}
+.event-detail .event-tiles > *:not(:last-child) {
+  margin-bottom: 2.5rem;
+}
+.event-detail .event-tiles .event-tile {
+  display: flex;
+}
+.event-detail .event-tiles .event-tile .icon {
+  flex-grow: 0;
+  flex-shrink: 0;
+}
+.event-detail .event-tiles .event-tile .detail {
+  margin-left: 1.5rem;
+}
+.event-detail .not-set {
+  color: #9ca3af;
 }
 
 footer {
@@ -1853,6 +1886,8 @@ header .tools #avatar-button img {
   align-items: center;
   justify-content: center;
   background-color: transparent;
+  text-decoration: none;
+  cursor: pointer;
 }
 .icon-button:hover {
   background-color: #f9fafb;

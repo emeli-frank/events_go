@@ -101,7 +101,6 @@ func (s *eventService) updateEventTx(tx *sql.Tx, e *events.Event, coverImage []b
 	savedEvent.StartTime = 		e.StartTime
 	savedEvent.EndTime = 		e.EndTime
 	savedEvent.WelcomeMessage = e.WelcomeMessage
-	savedEvent.CoverImagePath = e.CoverImagePath
 	savedEvent.IsPublished = 	e.IsPublished
 
 	// add cover image path if cover image exist
@@ -109,7 +108,7 @@ func (s *eventService) updateEventTx(tx *sql.Tx, e *events.Event, coverImage []b
 	if coverImage != nil {
 		randStrs := RandStringBytes(32)
 		key = []string{randStrs[:2], randStrs[2:4], randStrs[4:]}
-		savedEvent.CoverImagePath = filepath.Join(key...)
+		savedEvent.CoverImagePath = filepath.Join(key...) + "." + coverImageExt
 	}
 
 	err = s.r.UpdateEventTx(tx, savedEvent)

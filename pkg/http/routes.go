@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func (a App) Routes() http.Handler {
+func (a App) Routes(uploadDir string) http.Handler {
 	standardMiddleWare := alice.New(/*h.recoverPanic ,*/ /*h.setReqCtxUser*/)
 	//authOnlyMiddleWare := alice.New(/*s.checkJWT, */s.authenticateUser)
 	dynamicMiddleware := alice.New(a.Session.Enable, a.addUserToSession)
@@ -30,6 +30,9 @@ func (a App) Routes() http.Handler {
 
 	// file route
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./pkg/static"))))
+
+	// upload route
+	r.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadDir))))
 
 	// test path
 	r.Handle("/test", dynamicMiddleware.Then(http.HandlerFunc(a.test))).Methods("GET")

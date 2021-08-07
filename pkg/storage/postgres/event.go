@@ -80,7 +80,7 @@ func (s *EventStorage) EventTx(tx *sql.Tx, id int) (*events.Event, error) {
 func (s *EventStorage) Events(uid int) ([]events.Event, error) {
 	const op = "eventStorage.Events"
 
-	query := fmt.Sprintf("SELECT id, title, end_time FROM events WHERE host_id = %d", uid)
+	query := fmt.Sprintf("SELECT id, title, end_time, cover_image_path FROM events WHERE host_id = %d", uid)
 
 	rows, err := s.DB().Query(query)
 	if err != nil {
@@ -91,7 +91,7 @@ func (s *EventStorage) Events(uid int) ([]events.Event, error) {
 	var ee []events.Event
 	for rows.Next() {
 		var e events.Event
-		err = rows.Scan(&e.ID, &e.Title, &e.EndTime)
+		err = rows.Scan(&e.ID, &e.Title, &e.EndTime, &e.CoverImagePath)
 		if err != nil {
 			return nil, errors2.Wrap(err, op, "scanning into a var")
 		}
@@ -147,8 +147,6 @@ func (s *EventStorage) UpdateEventTx(tx *sql.Tx, i *events.Event) error {
 	if err != nil {
 		return errors2.Wrap(err, op, "executing query")
 	}
-
-	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", i.CoverImagePath, i.ID)
 
 	return nil
 }

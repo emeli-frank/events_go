@@ -7,6 +7,7 @@
 @use "pages/home";
 @use "pages/event-list";
 @use "pages/event-form";
+@use "pages/event-detail";
 @use "modules/footer";
 @use "modules/form";
 
@@ -169,6 +170,8 @@ header {
   align-items: center;
   justify-content: center;
   background-color: transparent;
+  text-decoration: none;
+  cursor: pointer;
 
   &:hover {
     background-color: map.get(colors.$palette-gray, 50);
