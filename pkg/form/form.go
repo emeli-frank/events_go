@@ -112,7 +112,7 @@ func (f *form) GetError(field string) string {
 	}
 }*/
 
-func (f *form) ValidateField(field string, rule ...validation.Rule) *form {
+func (f *form) ValidateField(field string, message string, rule ...validation.Rule) *form {
 	// If f.Error has an unexpected error, just return form and do nothing.
 	// If en unexpected error is present, calling code will ignore validation
 	// errors anyways
@@ -131,7 +131,14 @@ func (f *form) ValidateField(field string, rule ...validation.Rule) *form {
 			if f.ValidationErrors == nil {
 				f.ValidationErrors = &validationError{}
 			}
-			f.ValidationErrors.Add(field, err.Error())
+
+			var msg string
+			if message == "" {
+				msg = message
+			} else {
+				msg = err.Error()
+			}
+			f.ValidationErrors.Add(field, msg)
 		}
 	}
 

@@ -10,6 +10,7 @@ $primary: map.get(colors.$palette-primary, 500);
 } */
 @import "bootstrap-5/bootstrap.scss";
 
+.btn-primary,
 .btn-primary:hover,
 .btn-primary:active,
 .btn-primary:visited,

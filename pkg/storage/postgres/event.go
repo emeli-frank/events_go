@@ -8,6 +8,8 @@ import (
 	"events/pkg/storage"
 	"fmt"
 	"github.com/lib/pq"
+	"os"
+	"path/filepath"
 )
 
 func NewEventStorage(base Postgres) (*EventStorage, error) {
@@ -21,15 +23,29 @@ type EventStorage struct {
 	Postgres
 }
 
-func (s *EventStorage) Event(id int) (*events.Event, error) {
-	const op = "eventStorage.Event"
+func (s *EventStorage) event(db storage.DB, id int) (*events.Event, error) {
+	const op = "eventStorage.event"
 
-	query := fmt.Sprintf("SELECT id, title, host_id FROM events WHERE id = %d", id)
+	if db == nil {
+		return nil, errors2.Wrap(errors.New("db is nil"), op, "fetching event")
+	}
 
-	row := s.DB().QueryRow(query)
+	query := fmt.Sprintf(
+		`SELECT id, title, description, link, start_time, 
+					end_time, welcome_message, cover_image_path, is_published, host_id 
+				FROM events 
+				WHERE id = %d`,
+		id,
+	)
+
+	row := db.QueryRow(query)
+
+	var description, link, welcomeMessage, coverImagePath sql.NullString
+	var startTime, endTime sql.NullTime
 
 	var e events.Event
-	err := row.Scan(&e.ID, &e.Title, &e.HostID)
+	err := row.Scan(&e.ID, &e.Title, &description, &link, &startTime,
+		&endTime, &welcomeMessage, &coverImagePath, &e.IsPublished, &e.HostID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors2.Wrap(&events.NotFound{Err: err}, op, "scanning into var")
@@ -37,7 +53,28 @@ func (s *EventStorage) Event(id int) (*events.Event, error) {
 		return nil, errors2.Wrap(err, op, "scanning into var")
 	}
 
-	return &e, errors2.Wrap(err, op, "")
+	e.Description = storage.NullableStrToStr(description)
+	e.Link = storage.NullableStrToStr(link)
+	e.WelcomeMessage = storage.NullableStrToStr(welcomeMessage)
+	e.CoverImagePath = storage.NullableStrToStr(coverImagePath)
+	e.StartTime = storage.SqlTimeToTime(startTime)
+	e.EndTime = storage.SqlTimeToTime(endTime)
+
+	return &e, nil
+}
+
+func (s *EventStorage) Event(id int) (*events.Event, error) {
+	const op = "eventStorage.Event"
+
+	e, err := s.event(s.DB(), id)
+	return e, errors2.Wrap(err, op, "getting event")
+}
+
+func (s *EventStorage) EventTx(tx *sql.Tx, id int) (*events.Event, error) {
+	const op = "eventStorage.EventTx"
+
+	e, err := s.event(tx, id)
+	return e, errors2.Wrap(err, op, "getting event")
 }
 
 func (s *EventStorage) Events(uid int) ([]events.Event, error) {
@@ -97,20 +134,21 @@ func (s *EventStorage) UpdateEventTx(tx *sql.Tx, i *events.Event) error {
 		SET 
 		    title = $1,
 		    description = $2,
-		    is_virtual = $3,
-		    link = $4,
-		    number_of_seats = $5,
-		    start_time = $6,
-		    end_time = $7,
-		    welcome_message = $8,
-		    is_published = $9
-		WHERE id = $10`
+		    link = $3,
+		    start_time = $4,
+		    end_time = $5,
+		    welcome_message = $6,
+		    is_published = $7,
+		    cover_image_path = $8
+		WHERE id = $9`
 
-	_, err := tx.Exec(query, i.Title, i.Description, i.IsVirtual, i.Link, i.NumberOfSeats,
-		i.StartTime, i.EndTime, i.WelcomeMessage, i.IsPublished, i.ID)
+	_, err := tx.Exec(query, i.Title, i.Description, i.Link,
+		i.StartTime, i.EndTime, i.WelcomeMessage, i.IsPublished, i.CoverImagePath, i.ID)
 	if err != nil {
 		return errors2.Wrap(err, op, "executing query")
 	}
+
+	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", i.CoverImagePath, i.ID)
 
 	return nil
 }
@@ -123,6 +161,45 @@ func (s *EventStorage) PublishEvent(id int) error {
 	_, err := s.DB().Exec(query, true, id)
 	if err != nil {
 		return errors2.Wrap(err, op, "executing query")
+	}
+
+	return nil
+}
+
+func (s *EventStorage) SaveEventCover(coverImage []byte, key []string, ext string) error {
+	const op = "eventStorage.SaveEventCover"
+
+	fullPath := []string{s.UploadDir()}
+	var uniquePath []string
+	for _, v := range key[:len(key) - 1] {
+		uniquePath = append(uniquePath, v)
+	}
+	fullPath = append(fullPath, uniquePath...)
+
+	// create random directory if not exist
+	if _, err := os.Stat(filepath.Join(fullPath...)); os.IsNotExist(err) {
+		err := os.MkdirAll(filepath.Join(fullPath...), os.ModeDir)
+		if err != nil {
+			return err
+		}
+	}
+
+	// create empty file
+	file2, err := os.OpenFile(
+		filepath.Join(filepath.Join(fullPath...),
+			key[2:len(key)][0] + "." + ext),
+		os.O_WRONLY|os.O_CREATE,
+		os.ModeDir,
+	)
+	if err != nil {
+		return err
+	}
+	defer file2.Close()
+
+	// copy uploaded file byte into newly  created empty file
+	_, err = file2.Write(coverImage)
+	if err != nil {
+		return err
 	}
 
 	return nil

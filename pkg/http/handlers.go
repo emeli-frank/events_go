@@ -10,6 +10,7 @@ import (
 	"github.com/golangcollege/sessions"
 	"github.com/gorilla/mux"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -38,6 +39,7 @@ type App struct {
 	ErrorLog      *log.Logger
 	Session       *sessions.Session
 	TemplateCache map[string]*template.Template
+	UploadDir	  string
 	UserService   events.UserService
 	EventService  events.EventService
 }
@@ -174,30 +176,69 @@ func (a App) showEventCreationForm(w http.ResponseWriter, r *http.Request) {
 func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 	const op = "http.createEvent"
 
-	e, err := eventFromRequest(r)
+	const maxFormSize = 2 << 19
+	var hasFile bool
+
+	err := r.ParseMultipartForm(defaultMultipartFormMaxMemory)
 	if err != nil {
-		a.clientError(w, http.StatusBadRequest)
+		a.Session.Put(r, sessionKeyFlash, "There was an error processing the form you submitted")
+		fmt.Println(err)
 		// todo:: show user a message
 		a.render(w, r, "create-event-page.tmpl", nil)
 		return
 	}
 
-	if err := r.ParseForm(); err != nil {
-		// todo:: show form error
+	e, err := eventFromRequest(r)
+	if err != nil {
+		a.Session.Put(r, sessionKeyFlash, "There was an error processing the form you submitted")
 		fmt.Println(err)
-		a.serverError(w, r, err)
+		// todo:: show user a message
+		a.render(w, r, "create-event-page.tmpl", nil)
+		return
 	}
+
+	file, handler, err := r.FormFile("cover_image")
+	if err == http.ErrMissingFile {
+		hasFile = false
+	} else if err != nil {
+		a.serverError(w, r, err)
+		return
+	} else {
+		hasFile = true
+	}
+	defer func() {
+		if file != nil {
+			file.Close()
+		}
+	}()
 
 	f := form.New(r.PostForm)
 
-	err = f.ValidateField("title", validation.Required, validation.Length(0, 64)).
-		ValidateField("description", validation.Length(0, 512)).
-		ValidateField("address", validation.Length(0, 128)).
-		ValidateField("link", validation.Length(0, 128)).
-		ValidateField("number_of_seats", validation.Length(2, 2 << 16)).
-		ValidateField("start_time", events.StartTimeRule(false)).
-		ValidateField("end_time", events.EndTimeRule(e.StartTime, false)).
-		ValidateField("welcome_message", validation.Length(0, 256)).
+	err = f.ValidateField("title", "", validation.Required, validation.Length(0, 64)).
+		ValidateField("description", "", validation.Length(0, 512)).
+		ValidateField("address", "", validation.Length(0, 128)).
+		ValidateField("link", "", validation.Length(0, 128)).
+		ValidateField("number_of_seats", "", validation.Length(2, 2 << 16)).
+		ValidateField("start_time", "", events.StartTimeRule(false)).
+		ValidateField("end_time", "", events.EndTimeRule(e.StartTime, false)).
+		ValidateField("welcome_message", "", validation.Length(0, 256)).
+		//ValidateField("cover_image", "Image is too large", validation.InRange(0, int(handler.Size))). // todo:: validate size but be mindful that handler may be nil, consider using a custom validator
+		ValidateField("cover_image", "Image is too large", validation.RuleFunc(func(v interface{}) error { // todo:: find a better way to validate
+			if !hasFile {
+				return nil
+			}
+
+			size, ok := v.(int64)
+			if !ok {
+				return fmt.Errorf("expected int64, got %T\n", size)
+			}
+
+			if size > maxFormSize {
+				return fmt.Errorf("Image size cannot be more than %d \n", size)
+			}
+			return nil
+			}),
+		).
 		// todo:: validate scope[emails, ""]
 		Error()
 	//fmt.Printf(">>>>>>>>>>>>>>>>>>>>> type: %T, value: %p\n", err, err)
@@ -219,7 +260,25 @@ func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = a.EventService.CreateEvent(e, u.ID)
+	var fileBytes []byte
+	var ext string
+	// read bytes from uploaded file
+	if hasFile {
+		// todo:: use something more secure. Look for a lib that can do this.
+		ext, err = fileExt(handler.Header.Get("Content-Type"))
+		if err != nil {
+			a.serverError(w, r, err)
+			return
+		}
+
+		fileBytes, err = ioutil.ReadAll(file)
+		if err != nil {
+			a.serverError(w, r, err)
+			return
+		}
+	}
+
+	_, err = a.EventService.CreateEvent(e, fileBytes, ext, u.ID)
 	if err != nil {
 		if _, ok := err.(validation.Error); ok {
 			fmt.Println("validation error")
@@ -240,60 +299,6 @@ func (a App) showEventEditForm(w http.ResponseWriter, r *http.Request) {
 
 func (a App) editEvent(w http.ResponseWriter, r *http.Request) {
 	const op = "http.editEvent"
-
-	e, err := eventFromRequest(r)
-	if err != nil {
-		a.clientError(w, http.StatusBadRequest)
-		// todo:: show user a message
-		a.render(w, r, "edit-event-page.tmpl", nil)
-		return
-	}
-
-	if err := r.ParseForm(); err != nil {
-		// todo:: show form error
-		fmt.Println(err)
-	}
-
-	f := form.New(r.PostForm)
-
-	err = f.ValidateField("title", validation.Required, validation.Length(0, 64)).
-		ValidateField("description", validation.Length(0, 512)).
-		ValidateField("address", validation.Length(0, 128)).
-		ValidateField("link", validation.Length(0, 128)).
-		ValidateField("number_of_seats", validation.Length(2, 2 << 16)).
-		ValidateField("start_time", events.StartTimeRule(false)).
-		ValidateField("end_time", events.EndTimeRule(e.StartTime, false)).
-		ValidateField("welcome_message", validation.Length(0, 256)).
-		// todo:: validate scope[emails, ""]
-		Error()
-	//fmt.Printf(">>>>>>>>>>>>>>>>>>>>> type: %T, value: %p\n", err, err)
-	if err != nil {
-		if e, ok := err.(form.Error); ok {
-			fmt.Println("form error: ", e.ErrorMessages()) // todo:: handler
-			fmt.Println(f)
-			a.render(w, r, "create-event.page.tmpl", f)
-			return
-		} else {
-			a.serverError(w, r, err)
-			return
-		}
-	}
-
-	u, ok := events.UserFromContext(r.Context())
-	if !ok {
-		a.serverError(w, r, err)
-		return
-	}
-
-	_, err = a.EventService.CreateEvent(e, u.ID)
-	if err != nil {
-		if _, ok := err.(validation.Error); ok {
-			fmt.Println("validation error")
-			// todo:: handle, pass back to form
-		}
-		// todo:: handle -> server error
-		fmt.Println(err)
-	}
 
 	http.Redirect(w, r, "/events", http.StatusSeeOther)
 }
@@ -336,11 +341,6 @@ func eventFromRequest(r *http.Request) (*events.Event, error) {
 	const op = "eventFromRequest"
 
 	var err error
-	err = r.ParseMultipartForm(defaultMultipartFormMaxMemory)
-	if err != nil {
-		return nil, errors2.Wrap(err, op, "parsing form")
-	}
-
 	var id int
 	if idStr := r.PostForm.Get("id"); idStr == "" {
 		id = 0
@@ -413,9 +413,7 @@ func eventFromRequest(r *http.Request) (*events.Event, error) {
 		ID:             id,
 		Title:          r.PostForm.Get("title"),
 		Description:    r.PostForm.Get("description"),
-		IsVirtual:      false,
 		Link:           r.PostForm.Get("link"),
-		NumberOfSeats:  0,
 		StartTime:      startTime,
 		EndTime:        endTime,
 		WelcomeMessage: r.PostForm.Get("welcome_message"),
@@ -491,6 +489,7 @@ func (a App) render(w http.ResponseWriter, r *http.Request, name string, td inte
 	if !ok {
 		// todo:: show server error
 		fmt.Println(fmt.Errorf("server error: the template %s does not exist", name))
+		a.serverError(w, r, fmt.Errorf("server error: the template %s does not exist", name))
 		//a.serverError(w, r, fmt.Errorf("the template %s does not exist", name))
 		return
 	}
@@ -531,4 +530,15 @@ func (a *App) addDefaultData(data interface{}, r *http.Request) *templateData {
 	}
 
 	return td
+}
+
+func fileExt(mime string) (string, error) {
+	switch mime {
+	case "image/jpeg":
+		return "jpg", nil
+	case "application/pdf":
+		return "pdf", nil
+	default:
+		return "", errors.New("unexpected mime type")
+	}
 }

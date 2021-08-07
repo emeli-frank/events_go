@@ -2,9 +2,35 @@
 @use "sass:map";
 @use "lib/main";
 @use "lib/base/colors";
+@use "lib/base/breakpoints";
+@use "variables" as var;
 @use "pages/home";
 @use "pages/event-list";
+@use "pages/event-form";
 @use "modules/footer";
+@use "modules/form";
+
+// sticky footer
+html, body {
+  min-height: 100%;
+}
+
+body {
+  position: relative;
+  padding-bottom: var.$footer-height * 1px;
+}
+
+footer {
+  position: absolute;
+  bottom: 0;
+}
+
+// rule to disable scroll when nav is opened on small devices
+@media screen and (max-width: breakpoints.$breakpoint-md) {
+  body.no-scroll-on-nav-open {
+    overflow: hidden;
+  }
+}
 
 .pt-page { padding-top: 2rem; }
 
@@ -16,13 +42,13 @@
 }
 
 .px-page {
-  padding-left: 3rem;
-  padding-right: 3rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 .text-title {
   color: map.get(colors.$palette-primary, 500);
-  margin-bottom: 1rem;
+  margin-bottom: 2rem;
 }
 
 header {
@@ -49,7 +75,8 @@ header {
   nav {
     position: absolute;
     top: 0;
-    bottom: 0;
+    // bottom: 0;
+    height: 100vh;
     left: 0;
     right: 0;
     background-color: #ffffff;
@@ -163,5 +190,38 @@ header {
   & > * {
     background-color: map.get(colors.$palette-primary, 500);
     color: #ffffff;
+  }
+}
+
+// todo:: move to a separate file
+// buttons
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+
+  & > *:not(first-child) {
+      margin-right: .4rem !important;
+  }
+
+  &.align-end {
+      justify-content: flex-end;
+  }
+
+  &.align-center {
+      justify-content: center;
+  }
+
+  &.vertical {
+      flex-direction: column;
+      align-items: center;
+
+      & > * {
+          margin-right: 0 !important;
+          margin-left: 0 !important;
+      }
+
+      & > *:not(:first-child) {
+          margin-bottom: .4rem !important;
+      }
   }
 }

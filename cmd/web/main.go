@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -19,6 +20,7 @@ func main() {
 	addr := flag.String("addr", ":5000", "HTTP network address")
 	sessionKey := flag.String("sessionKey", "s6Ndh+pPbnzHbS*+9Pk8qGWhTzbpa@ge", "Session key")
 	dsn := flag.String("dsn", "host=localhost port=5432 user=events password=password dbname=events sslmode=disable", "Postgresql database connection info")
+	uploadDir := flag.String("uploadDir", "../uploads", "File upload directory")
 	flag.Parse()
 
 	//infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
@@ -40,7 +42,13 @@ func main() {
 		errorLog.Fatal(err)
 	}
 
-	psql := postgres.New(db)
+	// init upload path
+	err = os.MkdirAll(filepath.Join(".", *uploadDir), os.ModeDir)
+	if err != nil {
+		errorLog.Fatal(err)
+	}
+
+	psql := postgres.New(db, *uploadDir)
 
 	userRepo, err := postgres.NewUserStorage(psql)
 	if err != nil {
@@ -60,6 +68,7 @@ func main() {
 		ErrorLog:      errorLog,
 		Session:       session,
 		TemplateCache: templateCache,
+		UploadDir: *uploadDir,
 	}
 
 	router := app.Routes()

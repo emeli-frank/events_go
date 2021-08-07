@@ -1,9 +1,11 @@
 @use "sass:math";
 @use "sass:map";
+@use "../variables" as var;
 @use "../lib/base/colors";
 
 footer {
-  margin-top: 56px;
+  width: 100%;
+  height: var.$footer-height * 1px;
   font-size: 12px;
   background-color: #32333F;
   text-align: center;

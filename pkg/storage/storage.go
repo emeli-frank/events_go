@@ -3,7 +3,14 @@ package storage
 import (
 	"database/sql"
 	"errors"
+	"time"
 )
+
+type DB interface {
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+	Exec(query string, args ...interface{}) (sql.Result, error)
+}
 
 var (
 	ErrNotAPtr = errors.New("deactivation setter is not a pointer")
@@ -61,4 +68,27 @@ func NullableFloatToFloat(n1 sql.NullFloat64) float64 {
 	}
 
 	return n1.Float64
+}
+
+// TimeToSQLTime takes *time.Time and returns corresponding sql.NullTime
+// that can be safely saved in the DB
+func TimeToSQLTime(t1 *time.Time) sql.NullTime {
+	var t2 sql.NullTime
+	if t1 != nil {
+		t2.Valid = true
+		t2.Time = *t1
+	}
+
+	return t2
+}
+
+// SqlTimeToTime takes sq..NullTime and returns corresponding *time.Time
+// If time is not zero time, it returns it otherwise it returns a zero time
+func SqlTimeToTime(t1 sql.NullTime) *time.Time {
+	var t2 *time.Time
+	if !t1.Valid {
+		return t2
+	}
+
+	return &t1.Time
 }

@@ -89,16 +89,19 @@
 
 
     <script>
+        let bodyElem = document.getElementsByTagName('body')[0];
         let openBtn = document.querySelector('#menu-open-button');
         let closeBtn = document.querySelector('#menu-close-button');
         let nav = document.querySelector('#nav');
 
         openBtn.addEventListener('click', function () {
             nav.classList.add('open-sm');
+            bodyElem.classList.add('no-scroll-on-nav-open');
         });
 
         closeBtn.addEventListener('click', function () {
-            nav.classList.remove('open-sm')
+            nav.classList.remove('open-sm');
+            bodyElem.classList.remove('no-scroll-on-nav-open');
         });
 
         function initToasts() {

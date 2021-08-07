@@ -1,0 +1,76 @@
+@use "sass:map";
+@use "../lib/base/colors";
+
+@mixin control {
+    width: 100%;
+    background-color: map.get(colors.$palette-gray, 100);
+    margin-bottom: .4rem;
+    padding: 0 .8rem;
+
+    &, &:hover, &:focus {
+        border: none;
+        outline: none;
+    }
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+
+    label {
+        font-size: .8rem;
+        color: map.get(colors.$palette-primary, 500);
+        text-transform: uppercase;
+        margin-bottom: .4rem;
+    }
+
+    input {
+        height: 50px;
+        @include control();
+    }
+
+    textarea {
+        @include control();
+        min-height: 120px;
+        padding-top: .5rem;
+        padding-bottom: .5rem;
+    }
+
+    .input-hint, .input-error {
+        font-size: .8rem;
+    }
+
+    .input-hint {
+        color: map.get(colors.$palette-gray, 500);
+    }
+
+    .input-error {
+        color: map.get(colors.$palette-warn, 500);
+    }
+}
+
+.file-upload {
+    max-height: 180px;
+    max-width: 375px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    border-radius: 7px;
+
+    img {
+        width: 100%;
+    }
+
+    button {
+        position: absolute;
+        right: 1rem;
+        bottom: 1rem;
+        align-items: center;
+        display: flex;
+
+        & > *:first-child {
+            margin-right: .8rem;
+        }
+    }
+}

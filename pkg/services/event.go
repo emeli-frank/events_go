@@ -6,15 +6,19 @@ import (
 	"events/pkg/events"
 	"events/pkg/storage/postgres"
 	"events/pkg/validation"
+	"math/rand"
+	"path/filepath"
 )
 
 type eventRepo interface {
 	postgres.Postgres
 	Events(uid int) ([]events.Event, error)
 	Event(id int) (*events.Event, error)
+	EventTx(tx *sql.Tx, id int) (*events.Event, error)
 	SaveEventTx(tx *sql.Tx, title string, uid int) (int, error)
 	UpdateEventTx(tx *sql.Tx, i *events.Event) error
 	PublishEvent(id int) error
+	SaveEventCover(fileBytes []byte, uniquePath []string, ext string) error
 }
 
 func NewEventService(r eventRepo) *eventService {
@@ -41,7 +45,7 @@ func (s *eventService) Event(id int) (*events.Event, error) {
 	return e, errors2.Wrap(err, op, "getting event from repo")
 }
 
-func (s *eventService) CreateEvent(e *events.Event, uid int) (int, error) {
+func (s *eventService) CreateEvent(e *events.Event, coverImage []byte, coverImageExt string, uid int) (int, error) {
 	const op = "userStorage.CreateEvent"
 
 	tx, err := s.r.Tx()
@@ -57,13 +61,70 @@ func (s *eventService) CreateEvent(e *events.Event, uid int) (int, error) {
 
 	e.ID = id
 
-	err = s.r.UpdateEventTx(tx, e)
+	err = s.updateEventTx(tx, e, coverImage, coverImageExt) // todo::// user service so that images can be updated too
 	if err != nil {
 		_ = tx.Rollback()
 		return 0, errors2.Wrap(err, op, "updating event via repo")
 	}
 
 	return id, errors2.Wrap(tx.Commit(), op, "committing")
+}
+
+func (s *eventService) UpdateEvent(e *events.Event, coverImage []byte, coverImageExt string) error {
+	const op = "userStorage.UpdateEvent"
+
+	tx, err := s.r.Tx()
+	if err != nil {
+		return errors2.Wrap(err, op, "getting tx")
+	}
+
+	err = s.updateEventTx(tx, e, coverImage, coverImageExt)
+	if err != nil {
+		_ = tx.Rollback()
+		return errors2.Wrap(err, op, "updating event via update service")
+	}
+
+	return errors2.Wrap(tx.Commit(), op, "committing")
+}
+
+func (s *eventService) updateEventTx(tx *sql.Tx, e *events.Event, coverImage []byte, coverImageExt string) error {
+	const op = "userStorage.updateEventTx"
+
+	savedEvent, err := s.r.EventTx(tx, e.ID)
+	if err != nil {
+		return errors2.Wrap(err, op, "getting event")
+	}
+
+	savedEvent.Title = 			e.Title
+	savedEvent.Description = 	e.Description
+	savedEvent.Link = 			e.Link
+	savedEvent.StartTime = 		e.StartTime
+	savedEvent.EndTime = 		e.EndTime
+	savedEvent.WelcomeMessage = e.WelcomeMessage
+	savedEvent.CoverImagePath = e.CoverImagePath
+	savedEvent.IsPublished = 	e.IsPublished
+
+	// add cover image path if cover image exist
+	var key []string
+	if coverImage != nil {
+		randStrs := RandStringBytes(32)
+		key = []string{randStrs[:2], randStrs[2:4], randStrs[4:]}
+		savedEvent.CoverImagePath = filepath.Join(key...)
+	}
+
+	err = s.r.UpdateEventTx(tx, savedEvent)
+	if err != nil {
+		return errors2.Wrap(err, op, "updating event via repo")
+	}
+
+	if coverImage != nil {
+		err = s.saveEventCover(coverImage, key, coverImageExt)
+		if err != nil {
+			return errors2.Wrap(err, op, "updating event via repo")
+		}
+	}
+
+	return nil
 }
 
 func (s *eventService) PublishEvent(id int, uid int) error {
@@ -91,7 +152,6 @@ func (s *eventService) PublishEvent(id int, uid int) error {
 		validation.Value(e.Title, validation.Required),
 		validation.Value(e.Description, validation.Required),
 		validation.Value(e.Link, validation.Required),
-		validation.Value(e.NumberOfSeats, validation.Required),
 		validation.Value(e.StartTime, validation.Required),
 		validation.Value(e.EndTime, validation.Required),
 		validation.Value(e.Description, validation.Required),
@@ -101,6 +161,12 @@ func (s *eventService) PublishEvent(id int, uid int) error {
 	}
 
 	return errors2.Wrap(s.r.PublishEvent(id), op, "calling repo to publish event")
+}
+
+func (s *eventService) saveEventCover(fileBytes []byte, key []string, ext string) error {
+	const op = "userStorage.saveEventCover"
+
+	return errors2.Wrap(s.r.SaveEventCover(fileBytes, key, ext), op, "saving file via repo")
 }
 
 /*var TimeRule = func(start, end *time.Time) validation.Rule {
@@ -123,4 +189,16 @@ func (s *eventService) PublishEvent(id int, uid int) error {
 		},
 	)
 }*/
+
+
+// todo:: take to somewhere more appropriate
+func RandStringBytes(n int) string { // todo:: abstract into somewhere
+	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
 

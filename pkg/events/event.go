@@ -1,17 +1,18 @@
 package events
 
-import "time"
+import (
+	"time"
+)
 
 type Event struct {
 	ID             int
 	Title          string
 	Description    string
-	IsVirtual      bool
 	Link           string
-	NumberOfSeats  int
 	StartTime      *time.Time
 	EndTime        *time.Time
 	WelcomeMessage string
+	CoverImagePath string
 	IsPublished    bool
 	HostID         int
 }
@@ -19,6 +20,6 @@ type Event struct {
 type EventService interface {
 	Events(uid int) ([]Event, error)
 	Event(id int) (*Event, error)
-	CreateEvent(i *Event, uid int) (int, error)
+	CreateEvent(i *Event, coverImage []byte, coverImageExt string, uid int) (int, error)
 	PublishEvent(id, uid int) error
 }

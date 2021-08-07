@@ -1,55 +1,89 @@
 {{define "form"}}
 <form method="post" enctype="multipart/form-data">
-    <input type="text" name="title" placeholder="Title" value='{{.Get "title"}}'>
-    {{with .GetError "title"}}
-    <span class="text-danger">{{.}}</span>
-    {{end}}
-    <div>
-        Event Description
-        <textarea name="description" placeholder="welcome_message">{{.Get "description"}}</textarea>
+    <div class="form-field">
+        <label>Title</label>
+        <input type="text" name="title" placeholder="Title" value='{{.Get "title"}}'>
+        {{with .GetError "title"}}
+        <span class="input-error">{{.}}</span>
+        {{end}}
+    </div>
+
+    <div class="form-field">
+        <label>Event Description</label>
+        <textarea name="description" placeholder="Event description">{{.Get "description"}}</textarea>
         {{with .GetError "description"}}
-            <span class="text-danger">{{.}}</span>
+        <span class="input-error">{{.}}</span>
         {{end}}
     </div>
-    <input type="text" name="link" placeholder="link"  value='{{.Get "link"}}'>
-    {{with .GetError "link"}}
-        <span class="text-danger">{{.}}</span>
-    {{end}}
-    <input type="text" name="number_of_seats" placeholder="Number of seats" value='{{.Get "number_of_seats"}}'>
-    {{with .GetError "number_of_seats"}}
-        <span class="text-danger">{{.}}</span>
-    {{end}}
-    <input type="datetime-local" name="start_time" placeholder="start_time" value='{{.Get "start_time"}}'>
-    {{with .GetError "start_time"}}
-        <span class="text-danger">{{.}}</span>
-    {{end}}
-    <input type="datetime-local" name="end_time" placeholder="end_time" value='{{.Get "end_time"}}'>
-    {{with .GetError "end_time"}}
-        <span class="text-danger">{{.}}</span>
-    {{end}}
-    <div>
-        Welcome message
-        <textarea name="invitations" placeholder="Email (CSV)">{{.Get "invitations"}}</textarea>
-        {{with .GetError "invitations"}}
-        <span class="text-danger">{{.}}</span>
-        {{end}}
-    </div>
-    <div>
-        Welcome message
-        <textarea name="welcome_message" placeholder="welcome_message">{{.Get "welcome_message"}}</textarea>
-        {{with .GetError "welcome_message"}}
+
+    <div class="form-field">
+        <label>Event link</label>
+        <input type="text" name="link" placeholder="link"  value='{{.Get "link"}}'>
+        {{with .GetError "link"}}
         <span class="text-danger">{{.}}</span>
         {{end}}
     </div>
 
-    <div>
-        Cover image
-        <input type="file" name="cover_image">
+    <div class="form-field">
+        <label>Start time</label>
+        <input type="datetime-local" name="start_time" placeholder="start_time" value='{{.Get "start_time"}}'>
+        {{with .GetError "start_time"}}
+        <span class="input-error">{{.}}</span>
+        {{end}}
+    </div>
+
+    <div class="form-field">
+        <label>End time</label>
+        <input type="datetime-local" name="end_time" placeholder="end_time" value='{{.Get "end_time"}}'>
+        {{with .GetError "end_time"}}
+        <span class="input-error">{{.}}</span>
+        {{end}}
+    </div>
+
+    <div class="form-field">
+        <label>Invitations (Emails)</label>
+        <textarea name="invitations" placeholder="Emails (CSV)">{{.Get "invitations"}}</textarea>
+        {{with .GetError "invitations"}}
+        <span class="input-error">{{.}}</span>
+        {{else}}
+        <span class="input-hint">Emails to invite separated by commas</span>
+        {{end}}
+    </div>
+
+    <div class="form-field">
+        <label>Welcome message</label>
+        <textarea name="welcome_message" placeholder="Welcome message">{{.Get "welcome_message"}}</textarea>
+        {{with .GetError "welcome_message"}}
+        <span class="input-error">{{.}}</span>
+        {{else}}
+        <span class="input-hint">Message user sees after they have signed up for your event</span>
+        {{end}}
     </div>
 
     <input type="hidden" name="timezone" value="" id="timezone-input">
 
-    <button type="submit">Submit</button>
+    <!--<div class="image-upload">
+        Cover image
+        <button id="upload-btn" type="button">Upload image</button>
+        <input type="file" name="cover_image" class="hidden" id="upload-input">
+    </div>-->
+
+    <input type="file" name="cover_image" class="hidden" id="upload-input">
+    <div class="file-upload">
+        {{with .Get "cover_image_path"}}
+        <img src='.Get "cover_image_path'>
+        {{else}}
+        <img src="/static/img/img-upload-placeholder.jpg">
+        {{end}}
+        <button id="upload-btn" class="btn btn-primary" type="button">
+            <span class="material-icons">cloud_upload</span>
+            Choose image
+        </button>
+    </div>
+
+    <div class="button-group vertical">
+        <button type="submit" class="btn btn-primary w-100">Save</button>
+    </div>
 </form>
 
 <script>
@@ -60,6 +94,16 @@
         tzElem.setAttribute("value", tz);
     });
 
+    const uploadBtn = document.querySelector("#upload-btn");
+    const uploadInput = document.querySelector("#upload-input");
 
+    uploadInput.addEventListener('change', function () {
+        const file = this.files[0];
+        console.log(file.name);
+    })
+
+    uploadBtn.addEventListener('click', function () {
+        uploadInput.click();
+    })
 </script>
 {{end}}
