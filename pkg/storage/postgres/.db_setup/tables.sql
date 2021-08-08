@@ -24,6 +24,7 @@ CREATE TABLE events
     cover_image_path VARCHAR (128),
     is_published BOOLEAN DEFAULT FALSE,
     host_id INT NOT NULL,
+    created_at timestamptz DEFAULT NOW(),
 
     PRIMARY KEY (id),
     FOREIGN KEY (host_id)

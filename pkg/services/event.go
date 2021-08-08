@@ -71,7 +71,7 @@ func (s *eventService) CreateEvent(e *events.Event, coverImage []byte, coverImag
 }
 
 func (s *eventService) UpdateEvent(e *events.Event, coverImage []byte, coverImageExt string) error {
-	const op = "userStorage.UpdateEvent"
+	const op = "eventService.UpdateEvent"
 
 	tx, err := s.r.Tx()
 	if err != nil {
@@ -88,7 +88,7 @@ func (s *eventService) UpdateEvent(e *events.Event, coverImage []byte, coverImag
 }
 
 func (s *eventService) updateEventTx(tx *sql.Tx, e *events.Event, coverImage []byte, coverImageExt string) error {
-	const op = "userStorage.updateEventTx"
+	const op = "eventService.updateEventTx"
 
 	savedEvent, err := s.r.EventTx(tx, e.ID)
 	if err != nil {

@@ -15,7 +15,9 @@
                         url('{{with .CoverImagePath}} /{{$.Data.ImageBaseURL}}/{{.}} {{else}} /static/img/img-upload-placeholder.jpg {{end}}')"></figure>
             <div class="detail">
                 <div class="title">{{.Title}}</div>
-                <div class="description">Lorem ipsum lorem impsum lorem impsum lorem impsum lorem impsum lorem impsum.</div>
+                <div class="description">
+                    {{with .Description}}{{.}}...{{else}}<span class="not-set">(no description)</span>{{end}}
+                </div>
                 <div class="action-group">
                     <div class="action">
                     {{with .EndTime}}

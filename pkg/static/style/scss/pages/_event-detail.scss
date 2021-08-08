@@ -6,7 +6,33 @@
     background-position: center;
     background-size: cover;
     background-repeat: no-repeat;
-    height: 180px;
+    height: 250px;
+    position: relative;
+
+    .backdrop {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: map.get(colors.$palette-primary, 500);
+      opacity: .5;
+      transition: opacity 300ms ease-in;
+      z-index: 1;
+
+      &:hover {
+        opacity: .7;
+      }
+    }
+
+    & > h1 {
+      color: #ffffff;
+      position: absolute;
+      bottom: 1rem;
+      left: .8rem;
+      z-index: 2;
+    }
   }
 
   .actions {

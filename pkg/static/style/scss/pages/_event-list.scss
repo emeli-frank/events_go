@@ -30,6 +30,10 @@
             & > * {
                 color: map.get(colors.$palette-gray, 500);
             }
+
+            .description {
+                min-height: 96px;
+            }
         }
 
         .title {

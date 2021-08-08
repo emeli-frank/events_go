@@ -6,7 +6,10 @@
     {{with .Data.Event}}
     <div class="event-detail pb-page">
         <div class="hero-image" style="background-image:
-                        url('{{with .CoverImagePath}} /{{$.Data.ImageBaseURL}}/{{.}} {{else}} /static/img/img-upload-placeholder.jpg {{end}}')"></div>
+                        url('{{with .CoverImagePath}} /{{$.Data.ImageBaseURL}}/{{.}} {{else}} /static/img/img-upload-placeholder.jpg {{end}}')">
+            <span class="backdrop"></span>
+            <h1>{{.Title}}</h1>
+        </div>
 
         <div class="actions px-page my-4">
             <a href="/events/{{.ID}}/edit"  class="icon-button">

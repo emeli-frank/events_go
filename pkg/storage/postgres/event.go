@@ -80,7 +80,10 @@ func (s *EventStorage) EventTx(tx *sql.Tx, id int) (*events.Event, error) {
 func (s *EventStorage) Events(uid int) ([]events.Event, error) {
 	const op = "eventStorage.Events"
 
-	query := fmt.Sprintf("SELECT id, title, end_time, cover_image_path FROM events WHERE host_id = %d", uid)
+	query := fmt.Sprintf(`SELECT id, title, end_time, cover_image_path, left(description, 100) 
+						FROM events 
+						WHERE host_id = %d 
+						ORDER BY created_at DESC`, uid)
 
 	rows, err := s.DB().Query(query)
 	if err != nil {
@@ -91,7 +94,7 @@ func (s *EventStorage) Events(uid int) ([]events.Event, error) {
 	var ee []events.Event
 	for rows.Next() {
 		var e events.Event
-		err = rows.Scan(&e.ID, &e.Title, &e.EndTime, &e.CoverImagePath)
+		err = rows.Scan(&e.ID, &e.Title, &e.EndTime, &e.CoverImagePath, &e.Description)
 		if err != nil {
 			return nil, errors2.Wrap(err, op, "scanning into a var")
 		}
@@ -130,7 +133,7 @@ func (s *EventStorage) UpdateEventTx(tx *sql.Tx, i *events.Event) error {
 		return errors2.Wrap(storage.TxIsNil, op, "checking transaction")
 	}
 
-	query := `Update events 
+	query := `UPDATE events 
 		SET 
 		    title = $1,
 		    description = $2,
@@ -177,6 +180,16 @@ func (s *EventStorage) SaveEventCover(coverImage []byte, key []string, ext strin
 	// create random directory if not exist
 	if _, err := os.Stat(filepath.Join(fullPath...)); os.IsNotExist(err) {
 		err := os.MkdirAll(filepath.Join(fullPath...), os.ModeDir)
+		if err != nil {
+			return err
+		}
+	}
+
+	// return error if file exists
+	_, err := os.Stat(filepath.Join(filepath.Join(fullPath...), key[2:len(key)][0] + "." + ext))
+	if err == nil { // file exists, return error
+		return errors2.Wrap(errors.New("file with name already exist"), op, "checking if file exists")
+	} else if !os.IsNotExist(err) { // error is not NotExist, return error
 		if err != nil {
 			return err
 		}

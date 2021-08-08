@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -182,19 +183,9 @@ func (a App) showEventCreationForm(w http.ResponseWriter, r *http.Request) {
 func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 	const op = "http.createEvent"
 
-	const maxFormSize = 2 << 19
 	var hasFile bool
 
 	err := r.ParseMultipartForm(defaultMultipartFormMaxMemory)
-	if err != nil {
-		a.Session.Put(r, sessionKeyFlash, "There was an error processing the form you submitted")
-		fmt.Println(err)
-		// todo:: show user a message
-		a.render(w, r, "create-event-page.tmpl", nil)
-		return
-	}
-
-	e, err := eventFromRequest(r)
 	if err != nil {
 		a.Session.Put(r, sessionKeyFlash, "There was an error processing the form you submitted")
 		fmt.Println(err)
@@ -218,35 +209,18 @@ func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	f := form.New(r.PostForm)
+	e, err := eventFromRequest(r)
+	if err != nil {
+		a.Session.Put(r, sessionKeyFlash, "There was an error processing the form you submitted")
+		fmt.Println(err)
+		// todo:: show user a message
+		a.render(w, r, "create-event-page.tmpl", nil)
+		return
+	}
 
-	err = f.ValidateField("title", "", validation.Required, validation.Length(0, 64)).
-		ValidateField("description", "", validation.Length(0, 512)).
-		ValidateField("address", "", validation.Length(0, 128)).
-		ValidateField("link", "", validation.Length(0, 128)).
-		ValidateField("number_of_seats", "", validation.Length(2, 2 << 16)).
-		ValidateField("start_time", "", events.StartTimeRule(false)).
-		ValidateField("end_time", "", events.EndTimeRule(e.StartTime, false)).
-		ValidateField("welcome_message", "", validation.Length(0, 256)).
-		//ValidateField("cover_image", "Image is too large", validation.InRange(0, int(handler.Size))). // todo:: validate size but be mindful that handler may be nil, consider using a custom validator
-		ValidateField("cover_image", "Image is too large", validation.RuleFunc(func(v interface{}) error { // todo:: find a better way to validate
-			if !hasFile {
-				return nil
-			}
+	f := eventToFormData(e, nil)
 
-			size, ok := v.(int64)
-			if !ok {
-				return fmt.Errorf("expected int64, got %T\n", size)
-			}
-
-			if size > maxFormSize {
-				return fmt.Errorf("Image size cannot be more than %d \n", size)
-			}
-			return nil
-			}),
-		).
-		// todo:: validate scope[emails, ""]
-		Error()
+	err = validateEventFormData(r, hasFile, e.StartTime)
 	//fmt.Printf(">>>>>>>>>>>>>>>>>>>>> type: %T, value: %p\n", err, err)
 	if err != nil {
 		if e, ok := err.(form.Error); ok {
@@ -274,7 +248,7 @@ func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 		ext, err = fileExt(handler.Header.Get("Content-Type"))
 		if err != nil {
 			a.Session.Put(r, sessionKeyFlash, "Unsupported file type uploaded")
-			a.render(w, r, "create-event.page.tmpl", nil) // todo:: add data
+			a.render(w, r, "create-event.page.tmpl", eventToFormData(e, nil)) // todo:: add data
 			return
 		}
 
@@ -285,7 +259,7 @@ func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	_, err = a.EventService.CreateEvent(e, fileBytes, ext, u.ID)
+	id, err := a.EventService.CreateEvent(e, fileBytes, ext, u.ID)
 	if err != nil {
 		if _, ok := err.(validation.Error); ok {
 			fmt.Println("validation error")
@@ -295,13 +269,176 @@ func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/events", http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/events/%d", id), http.StatusSeeOther)
 }
 
 func (a App) showEventEditForm(w http.ResponseWriter, r *http.Request) {
 	const op = "http.showEventEditForm"
 
-	a.render(w, r, "edit-event.page.tmpl", form.New(r.Form))
+	id, err := strconv.Atoi(mux.Vars(r)["eventID"])
+	if err != nil {
+		a.notFound(w, r)
+		return
+	}
+
+	e, err := a.EventService.Event(id)
+	if err != nil {
+		switch errors2.Unwrap(err).(type) {
+		case *events.NotFound:
+			a.notFound(w, r)
+			return
+		default:
+			a.serverError(w, r, err)
+			return
+		}
+	}
+
+	a.render(w, r, "edit-event.page.tmpl", eventToFormData(e, nil))
+}
+
+func (a App) updateEvent(w http.ResponseWriter, r *http.Request) {
+	const op = "http.updateEvent"
+
+	var hasFile bool
+
+	eventID, err := strconv.Atoi(mux.Vars(r)["eventID"])
+	if err != nil {
+		a.notFound(w, r)
+		return
+	}
+
+	u, ok := events.UserFromContext(r.Context())
+	if !ok {
+		a.serverError(w, r, errors.New("could not get user from context"))
+		return
+	}
+
+	savedEvent, err := a.EventService.Event(eventID)
+	if err != nil {
+		switch errors2.Unwrap(err).(type) {
+		case *events.NotFound:
+			a.notFound(w, r)
+			return
+		default:
+			a.serverError(w, r, err)
+			return
+		}
+	} else if savedEvent.HostID != u.ID {
+		a.clientError(w, http.StatusUnauthorized)
+		return
+	}
+
+	err = r.ParseMultipartForm(defaultMultipartFormMaxMemory)
+	if err != nil {
+		a.Session.Put(r, sessionKeyFlash, "There was an error processing the form you submitted")
+		fmt.Println(err)
+		// todo:: show user a message
+		a.render(w, r, "create-event-page.tmpl", nil)
+		return
+	}
+
+	e, err := eventFromRequest(r)
+	if err != nil {
+		a.Session.Put(r, sessionKeyFlash, "There was an error processing the form you submitted")
+		fmt.Println(err)
+		// todo:: show user a message
+		a.render(w, r, "create-event-page.tmpl", nil)
+		return
+	}
+
+	e.ID = eventID
+
+	file, handler, err := r.FormFile("cover_image")
+	if err == http.ErrMissingFile {
+		hasFile = false
+	} else if err != nil {
+		a.serverError(w, r, err)
+		return
+	} else {
+		hasFile = true
+	}
+	defer func() {
+		if file != nil {
+			file.Close()
+		}
+	}()
+
+	f := eventToFormData(e, nil)
+
+	err = validateEventFormData(r, hasFile, e.StartTime)
+	if err != nil {
+		if e, ok := err.(form.Error); ok {
+			fmt.Println("form error: ", e.ErrorMessages()) // todo:: handler
+			fmt.Println(f)
+			a.render(w, r, "create-event.page.tmpl", f)
+			return
+		} else {
+			a.serverError(w, r, err)
+			return
+		}
+	}
+
+	var fileBytes []byte
+	var ext string
+	// read bytes from uploaded file
+	if hasFile {
+		// todo:: use something more secure. Look for a lib that can do this.
+		ext, err = fileExt(handler.Header.Get("Content-Type"))
+		if err != nil {
+			a.Session.Put(r, sessionKeyFlash, "Unsupported file type uploaded")
+			a.render(w, r, "create-event.page.tmpl", eventToFormData(e, nil)) // todo:: add data
+			return
+		}
+
+		fileBytes, err = ioutil.ReadAll(file)
+		if err != nil {
+			a.serverError(w, r, err)
+			return
+		}
+	}
+
+	err = a.EventService.UpdateEvent(e, fileBytes, ext)
+	if err != nil {
+		if _, ok := err.(validation.Error); ok {
+			fmt.Println("validation error")
+			// todo:: handle, pass back to form
+		}
+		a.serverError(w, r, err)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/events/%d", e.ID), http.StatusSeeOther)
+}
+
+func validateEventFormData(r *http.Request, hasFile bool, startTime *time.Time) error {
+	f := form.New(r.PostForm)
+
+	return f.ValidateField("title", "", validation.Required, validation.Length(0, 64)).
+		ValidateField("description", "", validation.Length(0, 512)).
+		ValidateField("address", "", validation.Length(0, 128)).
+		ValidateField("link", "", validation.Length(0, 128)).
+		ValidateField("start_time", "", events.StartTimeRule(false)).
+		ValidateField("end_time", "", events.EndTimeRule(startTime, false)).
+		ValidateField("welcome_message", "", validation.Length(0, 256)).
+		//ValidateField("cover_image", "Image is too large", validation.InRange(0, int(handler.Size))). // todo:: validate size but be mindful that handler may be nil, consider using a custom validator
+		ValidateField("cover_image", "Image is too large", validation.RuleFunc(func(v interface{}) error { // todo:: find a better way to validate
+			if !hasFile {
+				return nil
+			}
+
+			size, ok := v.(int64)
+			if !ok {
+				return fmt.Errorf("expected int64, got %T\n", size)
+			}
+
+			if size > defaultMultipartFormMaxMemory {
+				return fmt.Errorf("Image size cannot be more than %d \n", size)
+			}
+			return nil
+		}),
+		).
+		// todo:: validate scope[emails, ""]
+		Error()
 }
 
 func (a App) editEvent(w http.ResponseWriter, r *http.Request) {
@@ -548,4 +685,28 @@ func fileExt(mime string) (string, error) {
 	default:
 		return "", errors.New("unexpected mime type")
 	}
+}
+
+func eventToFormData(e *events.Event, invitations []string) *form.Form {
+	var startTimeStr, endTimeStr string
+
+	if e.StartTime != nil {
+		startTimeStr = e.StartTime.String()
+	}
+
+	if e.EndTime != nil {
+		endTimeStr = e.EndTime.String()
+	}
+
+	data := map[string][]string{
+		"title": {e.Title},
+		"description": {e.Description},
+		"link": {e.Link},
+		"start_time": {startTimeStr},
+		"end_time": {endTimeStr},
+		"invitations": {strings.Join(invitations, ", ")},
+		"welcome_message": {e.WelcomeMessage},
+	}
+
+	return form.New(data)
 }

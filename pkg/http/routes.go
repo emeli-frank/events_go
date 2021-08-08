@@ -24,7 +24,7 @@ func (a App) Routes(uploadDir string) http.Handler {
 	r.Handle("/events/create", authenticatedOnly.Then(http.HandlerFunc(a.showEventCreationForm))).Methods("GET")
 	r.Handle("/events/create", authenticatedOnly.Then(http.HandlerFunc(a.createEvent))).Methods("POST")
 	r.Handle("/events/{eventID:[0-9]+}/edit", authenticatedOnly.Then(http.HandlerFunc(a.showEventEditForm))).Methods("GET")
-	r.Handle("/events/{eventID:[0-9]+}/edit", authenticatedOnly.Then(http.HandlerFunc(a.test))).Methods("POST")
+	r.Handle("/events/{eventID:[0-9]+}/edit", authenticatedOnly.Then(http.HandlerFunc(a.updateEvent))).Methods("POST")
 
 	r.NotFoundHandler = dynamicMiddleware.Then(http.HandlerFunc(a.notFound))
 

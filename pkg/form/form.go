@@ -60,7 +60,7 @@ func (e *validationError) get(field string) string {
 
 
 // New is a constructor function that returns a form instance
-func New(data url.Values) *form {
+func New(data url.Values) *Form {
 	/*e :=validationError(map[string][]string{})
 	return &form{
 		data,
@@ -68,14 +68,14 @@ func New(data url.Values) *form {
 		nil,
 	}*/
 
-	return &form{
+	return &Form{
 		data,
 		nil,
 		nil,
 	}
 }
 
-type form struct {
+type Form struct {
 	url.Values
 	ValidationErrors *validationError
 
@@ -87,7 +87,7 @@ type form struct {
 	return len(f.ValidationErrors) == 0
 }*/
 
-func (f *form) Error() error {
+func (f *Form) Error() error {
 	// this if statement might seem redundant but it is need to avoid unexpected behaviour
 	// where f.ValidationErrors can be nil here but not nil in the main function.
 	// todo:: learn why
@@ -98,7 +98,7 @@ func (f *form) Error() error {
 	return f.ValidationErrors
 }
 
-func (f *form) GetError(field string) string {
+func (f *Form) GetError(field string) string {
 	if f.ValidationErrors == nil {
 		return ""
 	}
@@ -112,7 +112,7 @@ func (f *form) GetError(field string) string {
 	}
 }*/
 
-func (f *form) ValidateField(field string, message string, rule ...validation.Rule) *form {
+func (f *Form) ValidateField(field string, message string, rule ...validation.Rule) *Form {
 	// If f.Error has an unexpected error, just return form and do nothing.
 	// If en unexpected error is present, calling code will ignore validation
 	// errors anyways
