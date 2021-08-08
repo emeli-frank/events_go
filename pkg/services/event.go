@@ -21,6 +21,8 @@ type eventRepo interface {
 	PublishEvent(id int) error
 	SaveEventCover(fileBytes []byte, uniquePath []string, ext string) error
 	DeleteEventCoverPhoto(path string) error
+	SaveEventInvitationsTx(tx *sql.Tx, eventID int, emails []string) error
+	Invitations(id int, responded bool, accepted bool) ([]events.Invitation, error)
 }
 
 func NewEventService(r eventRepo) *eventService {
@@ -32,7 +34,7 @@ type eventService struct {
 }
 
 func (s *eventService) Events(uid int) ([]events.Event, error) {
-	const op = "userStorage.Events"
+	const op = "eventService.Events"
 
 	ee, err := s.r.Events(uid)
 
@@ -40,15 +42,15 @@ func (s *eventService) Events(uid int) ([]events.Event, error) {
 }
 
 func (s *eventService) Event(id int) (*events.Event, error) {
-	const op = "userStorage.Event"
+	const op = "eventService.Event"
 
 	e, err := s.r.Event(id)
 
 	return e, errors2.Wrap(err, op, "getting event from repo")
 }
 
-func (s *eventService) CreateEvent(e *events.Event, coverImage []byte, coverImageExt string, uid int) (int, error) {
-	const op = "userStorage.CreateEvent"
+func (s *eventService) CreateEvent(e *events.Event, invitations []string, coverImage []byte, coverImageExt string, uid int) (int, error) {
+	const op = "eventService.CreateEvent"
 
 	tx, err := s.r.Tx()
 	if err != nil {
@@ -63,7 +65,7 @@ func (s *eventService) CreateEvent(e *events.Event, coverImage []byte, coverImag
 
 	e.ID = id
 
-	err = s.updateEventTx(tx, e, coverImage, coverImageExt) // todo::// user service so that images can be updated too
+	err = s.updateEventTx(tx, e, invitations, coverImage, coverImageExt) // todo::// user service so that images can be updated too
 	if err != nil {
 		_ = tx.Rollback()
 		return 0, errors2.Wrap(err, op, "updating event via repo")
@@ -72,7 +74,7 @@ func (s *eventService) CreateEvent(e *events.Event, coverImage []byte, coverImag
 	return id, errors2.Wrap(tx.Commit(), op, "committing")
 }
 
-func (s *eventService) UpdateEvent(e *events.Event, coverImage []byte, coverImageExt string) error {
+func (s *eventService) UpdateEvent(e *events.Event, invitations []string, coverImage []byte, coverImageExt string) error {
 	const op = "eventService.UpdateEvent"
 
 	tx, err := s.r.Tx()
@@ -80,7 +82,7 @@ func (s *eventService) UpdateEvent(e *events.Event, coverImage []byte, coverImag
 		return errors2.Wrap(err, op, "getting tx")
 	}
 
-	err = s.updateEventTx(tx, e, coverImage, coverImageExt)
+	err = s.updateEventTx(tx, e, invitations, coverImage, coverImageExt)
 	if err != nil {
 		_ = tx.Rollback()
 		return errors2.Wrap(err, op, "updating event via update service")
@@ -89,7 +91,7 @@ func (s *eventService) UpdateEvent(e *events.Event, coverImage []byte, coverImag
 	return errors2.Wrap(tx.Commit(), op, "committing")
 }
 
-func (s *eventService) updateEventTx(tx *sql.Tx, e *events.Event, coverImage []byte, coverImageExt string) error {
+func (s *eventService) updateEventTx(tx *sql.Tx, e *events.Event, invitations []string, coverImage []byte, coverImageExt string) error {
 	const op = "eventService.updateEventTx"
 
 	savedEvent, err := s.r.EventTx(tx, e.ID)
@@ -116,6 +118,11 @@ func (s *eventService) updateEventTx(tx *sql.Tx, e *events.Event, coverImage []b
 	err = s.r.UpdateEventTx(tx, savedEvent)
 	if err != nil {
 		return errors2.Wrap(err, op, "updating event via repo")
+	}
+
+	err = s.saveEventInvitationsTx(tx, e.ID, invitations)
+	if err != nil {
+		return errors2.Wrap(err, op, "saving invitations")
 	}
 
 	if coverImage != nil {
@@ -195,15 +202,28 @@ func (s *eventService) PublishEvent(id int, uid int) error {
 }
 
 func (s *eventService) saveEventCover(fileBytes []byte, key []string, ext string) error {
-	const op = "userStorage.saveEventCover"
+	const op = "eventService.saveEventCover"
 
 	return errors2.Wrap(s.r.SaveEventCover(fileBytes, key, ext), op, "saving file via repo")
 }
 
 func (s *eventService) deleteEventCover(path string) error {
-	const op = "userStorage.deleteEventCover"
+	const op = "eventService.deleteEventCover"
 
 	return errors2.Wrap(s.r.DeleteEventCoverPhoto(path), op, "calling repo to remove file")
+}
+
+func (s *eventService) saveEventInvitationsTx(tx *sql.Tx, eventID int, emails []string) error {
+	const op = "eventService.saveEventInvitationsTx"
+
+	return errors2.Wrap(s.r.SaveEventInvitationsTx(tx, eventID, emails), op, "calling repo to save invitations")
+}
+
+func (s *eventService) Invitations(id int, responded bool, accepted bool) ([]events.Invitation, error) {
+	const op = "eventService.Invitations"
+
+	ii, err := s.r.Invitations(id, responded, accepted)
+	return ii, errors2.Wrap(err, op, "getting invitations from repo")
 }
 
 /*var TimeRule = func(start, end *time.Time) validation.Rule {

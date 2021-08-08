@@ -245,3 +245,63 @@ func (s *EventStorage) DeleteEventCoverPhoto(path string) error {
 
 	return errors2.Wrap(os.Remove(filepath.Join(s.UploadDir(), path)), op, "deleting file")
 }
+
+func (s *EventStorage) SaveEventInvitationsTx(tx *sql.Tx, eventID int, emails []string) error {
+	const op = "eventStorage.SaveEventInvitationsTX"
+
+	if tx == nil {
+		return errors.New("tx is nil")
+	}
+
+	if emails == nil {
+		return nil
+	}
+
+	query := "INSERT INTO event_invitations (event_id, email) VALUES "
+
+	var params []interface{}
+
+	for k, email := range emails {
+		query += fmt.Sprintf("(%d, $%d)", eventID, k + 1)
+		if len(emails) - k > 1 {
+			query += ","
+		}
+		params = append(params, email)
+	}
+
+	_, err := tx.Exec(query, params...)
+	return errors2.Wrap(err, op, "executing query")
+}
+
+func (s *EventStorage) Invitations(id int, responded bool, accepted bool) ([]events.Invitation, error) {
+	const op = "eventStorage.Invitations"
+
+	var query string
+	if !responded {
+		query = fmt.Sprintf("SELECT event_id, email, has_responded, response, responded_at FROM event_invitations WHERE event_id = %d AND has_responded = false", id)
+	} else {
+		if accepted {
+			query = fmt.Sprintf("SELECT event_id, email, has_responded, response, responded_at FROM event_invitations WHERE event_id = %d AND has_responded = true AND response = true", id)
+		} else {
+			query = fmt.Sprintf("SELECT event_id, email, has_responded, response, responded_at FROM event_invitations WHERE event_id = %d AND has_responded = true AND response = false", id)
+		}
+	}
+
+	rows, err := s.DB().Query(query)
+	if err != nil {
+		return nil, errors2.Wrap(err, op, "executing query")
+	}
+	defer rows.Close()
+
+	var ii []events.Invitation
+	for rows.Next() {
+		var i events.Invitation
+		err = rows.Scan(&i.EventID, &i.Email, &i.HasResponded, &i.Response, &i.Time)
+		if err != nil {
+			return nil, errors2.Wrap(err, op, "scanning into variable")
+		}
+		ii = append(ii, i)
+	}
+
+	return ii, errors2.Wrap(rows.Err(), op, "error after scan")
+}

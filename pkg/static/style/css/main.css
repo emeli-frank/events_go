@@ -1602,7 +1602,7 @@ body {
   font-size: 0.7rem;
 }
 
-form > *:not(last-child) {
+.event-form > *:not(last-child) {
   margin-bottom: 1.5rem;
 }
 
@@ -1661,6 +1661,70 @@ form > *:not(last-child) {
 }
 .event-detail .not-set {
   color: #9ca3af;
+}
+
+.invitations .tab {
+  display: flex;
+}
+.invitations .tab > *:not(:first-child) {
+  margin-left: 0.5rem;
+}
+.invitations .tab > *:not(:last-child) {
+  margin-right: 0.5rem;
+}
+.invitations .tab .tab-item {
+  height: 56px;
+  position: relative;
+  padding: 0 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #6b7280;
+}
+.invitations .tab .tab-item:hover {
+  background-color: #f9fafb;
+}
+.invitations .tab .tab-item:active {
+  background-color: #f3f4f6;
+}
+.invitations .tab .tab-item:after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  height: 4px;
+  background-color: transparent;
+  width: 100%;
+  border-top-right-radius: 5px;
+  border-top-left-radius: 5px;
+}
+.invitations .tab .tab-item.active * {
+  color: #2196f3;
+}
+.invitations .tab .tab-item.active:after {
+  background-color: #2196f3;
+}
+.invitations .invitation-tile {
+  display: flex;
+}
+.invitations .invitation-tile .avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e5e7eb;
+}
+.invitations .invitation-tile .detail {
+  margin-left: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.invitations .invitation-tile .detail .time {
+  font-size: 11px;
+  color: #2196f3;
 }
 
 footer {

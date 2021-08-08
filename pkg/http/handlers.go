@@ -270,7 +270,7 @@ func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	id, err := a.EventService.CreateEvent(e, fileBytes, ext, u.ID)
+	id, err := a.EventService.CreateEvent(e, invitationsFromRequest(r), fileBytes, ext, u.ID)
 	if err != nil {
 		if _, ok := err.(validation.Error); ok {
 			fmt.Println("validation error")
@@ -419,7 +419,7 @@ func (a App) updateEvent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = a.EventService.UpdateEvent(e, fileBytes, ext)
+	err = a.EventService.UpdateEvent(e, invitationsFromRequest(r), fileBytes, ext)
 	if err != nil {
 		if _, ok := err.(validation.Error); ok {
 			fmt.Println("validation error")
@@ -506,6 +506,60 @@ func validateEventFormData(r *http.Request, hasFile bool, startTime *time.Time) 
 		).
 		// todo:: validate scope[emails, ""]
 		Error()
+}
+
+func (a App) eventInvitations(w http.ResponseWriter, r *http.Request) {
+	const op = "http.eventInvitations"
+
+	eventID, err := strconv.Atoi(mux.Vars(r)["eventID"])
+	if err != nil {
+		a.notFound(w, r)
+		return
+	}
+
+	u, ok := events.UserFromContext(r.Context())
+	if !ok {
+		a.serverError(w, r, errors.New("could not get user from context"))
+		return
+	}
+
+	var responded, accepted bool
+	status := r.FormValue("status")
+	switch status {
+	case "accepted":
+		responded, accepted = true, true
+	case "rejected":
+		responded, accepted = true, false
+	case "pending":
+		responded, accepted = false, false
+	}
+
+	e, err := a.EventService.Event(eventID)
+	if err != nil {
+		switch errors2.Unwrap(err).(type) {
+		case *events.NotFound:
+			a.notFound(w, r)
+			return
+		default:
+			a.serverError(w, r, err)
+			return
+		}
+	} else if e.HostID != u.ID {
+		a.clientError(w, http.StatusUnauthorized)
+		return
+	}
+
+	ii, err := a.EventService.Invitations(eventID, responded, accepted)
+	if err != nil {
+		a.serverError(w, r, err)
+		return
+	}
+
+	a.render(w, r, "invitations.page.tmpl", struct {
+		Invitations []events.Invitation
+		Event *events.Event
+		CurrentTab string
+	}{ii, e, status})
 }
 
 func (a App) publishEvent(w http.ResponseWriter, r *http.Request) {
@@ -624,6 +678,19 @@ func eventFromRequest(r *http.Request) (*events.Event, error) {
 		WelcomeMessage: r.PostForm.Get("welcome_message"),
 		IsPublished:    isPublished,
 	}, nil
+}
+
+func invitationsFromRequest(r *http.Request) []string {
+	iiStr := r.PostForm.Get("invitations")
+	iiStr = strings.ReplaceAll(iiStr, " ", "")
+	iiStr = strings.Trim(iiStr, ",")
+
+	ii := strings.Split(iiStr, ",")
+	if len(ii) == 1 && ii[0] == "" {
+		return nil
+	}
+
+	return ii
 }
 
 func (a *App) notFound(w http.ResponseWriter, r *http.Request) {

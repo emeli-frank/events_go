@@ -51,6 +51,9 @@ CREATE TABLE event_invitations
 (
     email VARCHAR(128),
     event_id INT,
+    has_responded BOOLEAN DEFAULT FALSE,
+    response BOOLEAN DEFAULT FALSE,
+    responded_at timestamptz,
 
     UNIQUE (email, event_id),
     FOREIGN KEY (event_id)

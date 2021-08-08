@@ -1,6 +1,6 @@
 {{define "form"}}
     {{with .Data.FormData}}
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" enctype="multipart/form-data" class="event-form">
         <div class="form-field">
             <label>Title</label>
             <input type="text" name="title" placeholder="Title" value='{{.Get "title"}}'>
