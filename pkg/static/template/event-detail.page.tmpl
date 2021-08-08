@@ -16,9 +16,11 @@
                 <span class="material-icons">edit</span>
             </a>
 
-            <div class="icon-button delete">
-                <span class="material-icons">delete_outline</span>
-            </div>
+            <form method="post" action="/events/{{.ID}}/delete">
+                <button type="submit" class="icon-button delete">
+                    <span class="material-icons">delete_outline</span>
+                </button>
+            </form>
         </div>
 
         <section class="event-tiles px-page">

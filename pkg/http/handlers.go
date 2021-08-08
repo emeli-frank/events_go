@@ -36,6 +36,11 @@ type templateData struct {
 	Data interface{}
 }
 
+type eventFormData struct {
+	FormData *form.Form
+	ImageBaseURL string
+}
+
 type App struct {
 	ErrorLog      *log.Logger
 	Session       *sessions.Session
@@ -177,7 +182,10 @@ func (a App) showEvent(w http.ResponseWriter, r *http.Request) {
 func (a App) showEventCreationForm(w http.ResponseWriter, r *http.Request) {
 	const op = "http.showEventCreationForm"
 
-	a.render(w, r, "create-event.page.tmpl", form.New(r.Form))
+	a.render(w, r, "create-event.page.tmpl", eventFormData{
+		form.New(r.Form),
+		a.UploadDir},
+	)
 }
 
 func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
@@ -226,7 +234,10 @@ func (a App) createEvent(w http.ResponseWriter, r *http.Request) {
 		if e, ok := err.(form.Error); ok {
 			fmt.Println("form error: ", e.ErrorMessages()) // todo:: handler
 			fmt.Println(f)
-			a.render(w, r, "create-event.page.tmpl", f)
+			a.render(w, r, "create-event.page.tmpl", eventFormData{
+				FormData: f,
+				ImageBaseURL: a.UploadDir,
+			})
 			return
 		} else {
 			a.serverError(w, r, err)
@@ -293,7 +304,12 @@ func (a App) showEventEditForm(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	a.render(w, r, "edit-event.page.tmpl", eventToFormData(e, nil))
+	//a.render(w, r, "edit-event.page.tmpl", eventToFormData(e, nil))
+
+	a.render(w, r, "edit-event.page.tmpl", eventFormData{
+		eventToFormData(e, nil),
+		a.UploadDir},
+	)
 }
 
 func (a App) updateEvent(w http.ResponseWriter, r *http.Request) {
@@ -370,7 +386,10 @@ func (a App) updateEvent(w http.ResponseWriter, r *http.Request) {
 		if e, ok := err.(form.Error); ok {
 			fmt.Println("form error: ", e.ErrorMessages()) // todo:: handler
 			fmt.Println(f)
-			a.render(w, r, "create-event.page.tmpl", f)
+			a.render(w, r, "create-event.page.tmpl", eventFormData{
+				FormData: f,
+				ImageBaseURL: a.UploadDir,
+			})
 			return
 		} else {
 			a.serverError(w, r, err)
@@ -386,7 +405,10 @@ func (a App) updateEvent(w http.ResponseWriter, r *http.Request) {
 		ext, err = fileExt(handler.Header.Get("Content-Type"))
 		if err != nil {
 			a.Session.Put(r, sessionKeyFlash, "Unsupported file type uploaded")
-			a.render(w, r, "create-event.page.tmpl", eventToFormData(e, nil)) // todo:: add data
+			a.render(w, r, "create-event.page.tmpl", struct {
+				FormData *form.Form
+				ImageBaseURL string
+			}{eventToFormData(e, nil), a.UploadDir})
 			return
 		}
 
@@ -408,6 +430,51 @@ func (a App) updateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("/events/%d", e.ID), http.StatusSeeOther)
+}
+
+func (a App) deleteEvent(w http.ResponseWriter, r *http.Request) {
+	const op = "http.deleteEvent"
+
+	eventID, err := strconv.Atoi(mux.Vars(r)["eventID"])
+	if err != nil {
+		a.notFound(w, r)
+		return
+	}
+
+	u, ok := events.UserFromContext(r.Context())
+	if !ok {
+		a.serverError(w, r, errors.New("could not get user from context"))
+		return
+	}
+
+	savedEvent, err := a.EventService.Event(eventID)
+	if err != nil {
+		switch errors2.Unwrap(err).(type) {
+		case *events.NotFound:
+			a.notFound(w, r)
+			return
+		default:
+			a.serverError(w, r, err)
+			return
+		}
+	} else if savedEvent.HostID != u.ID {
+		a.clientError(w, http.StatusUnauthorized)
+		return
+	}
+
+	err = a.EventService.DeleteEvent(eventID)
+	if err != nil {
+		if _, ok := err.(validation.Error); ok {
+			fmt.Println("validation error")
+			// todo:: handle, pass back to form
+		}
+		a.serverError(w, r, err)
+		return
+	}
+
+	a.Session.Put(r, sessionKeyFlash, "Event successfully deleted")
+
+	http.Redirect(w, r, "/events", http.StatusSeeOther)
 }
 
 func validateEventFormData(r *http.Request, hasFile bool, startTime *time.Time) error {
@@ -439,12 +506,6 @@ func validateEventFormData(r *http.Request, hasFile bool, startTime *time.Time) 
 		).
 		// todo:: validate scope[emails, ""]
 		Error()
-}
-
-func (a App) editEvent(w http.ResponseWriter, r *http.Request) {
-	const op = "http.editEvent"
-
-	http.Redirect(w, r, "/events", http.StatusSeeOther)
 }
 
 func (a App) publishEvent(w http.ResponseWriter, r *http.Request) {
@@ -706,6 +767,7 @@ func eventToFormData(e *events.Event, invitations []string) *form.Form {
 		"end_time": {endTimeStr},
 		"invitations": {strings.Join(invitations, ", ")},
 		"welcome_message": {e.WelcomeMessage},
+		"cover_image_path": {e.CoverImagePath},
 	}
 
 	return form.New(data)

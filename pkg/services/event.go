@@ -17,8 +17,10 @@ type eventRepo interface {
 	EventTx(tx *sql.Tx, id int) (*events.Event, error)
 	SaveEventTx(tx *sql.Tx, title string, uid int) (int, error)
 	UpdateEventTx(tx *sql.Tx, i *events.Event) error
+	DeleteEventTx(tx *sql.Tx, id int) error
 	PublishEvent(id int) error
 	SaveEventCover(fileBytes []byte, uniquePath []string, ext string) error
+	DeleteEventCoverPhoto(path string) error
 }
 
 func NewEventService(r eventRepo) *eventService {
@@ -126,6 +128,36 @@ func (s *eventService) updateEventTx(tx *sql.Tx, e *events.Event, coverImage []b
 	return nil
 }
 
+func (s *eventService) DeleteEvent(id int) error {
+	const op = "eventService.DeleteEvent"
+
+	tx, err := s.r.Tx()
+	if err != nil {
+		return errors2.Wrap(err, op, "getting tx")
+	}
+
+	e, err := s.Event(id)
+	if err != nil {
+		return errors2.Wrap(err, op, "getting event")
+	}
+
+	err = s.r.DeleteEventTx(tx, id)
+	if err != nil {
+		tx.Rollback()
+		return errors2.Wrap(err, op, "deleting event via repo")
+	}
+
+	if e.CoverImagePath != "" {
+		err = s.deleteEventCover(e.CoverImagePath)
+		if err != nil {
+			tx.Rollback()
+			return errors2.Wrap(err, op, "deleting event via repo")
+		}
+	}
+
+	return errors2.Wrap(tx.Commit(), op, "committing tx")
+}
+
 func (s *eventService) PublishEvent(id int, uid int) error {
 	const op = "eventService.PublishEvent"
 
@@ -166,6 +198,12 @@ func (s *eventService) saveEventCover(fileBytes []byte, key []string, ext string
 	const op = "userStorage.saveEventCover"
 
 	return errors2.Wrap(s.r.SaveEventCover(fileBytes, key, ext), op, "saving file via repo")
+}
+
+func (s *eventService) deleteEventCover(path string) error {
+	const op = "userStorage.deleteEventCover"
+
+	return errors2.Wrap(s.r.DeleteEventCoverPhoto(path), op, "calling repo to remove file")
 }
 
 /*var TimeRule = func(start, end *time.Time) validation.Rule {

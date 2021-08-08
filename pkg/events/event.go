@@ -22,5 +22,6 @@ type EventService interface {
 	Event(id int) (*Event, error)
 	CreateEvent(i *Event, coverImage []byte, coverImageExt string, uid int) (int, error)
 	UpdateEvent(e *Event, coverImage []byte, coverImageExt string) error
+	DeleteEvent(id int) error
 	PublishEvent(id, uid int) error
 }

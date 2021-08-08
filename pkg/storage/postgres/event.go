@@ -10,6 +10,7 @@ import (
 	"github.com/lib/pq"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func NewEventStorage(base Postgres) (*EventStorage, error) {
@@ -154,6 +155,23 @@ func (s *EventStorage) UpdateEventTx(tx *sql.Tx, i *events.Event) error {
 	return nil
 }
 
+func (s *EventStorage) DeleteEventTx(tx *sql.Tx, id int) error {
+	const op = "eventStorage.DeleteEventTx"
+
+	if tx == nil {
+		return errors2.Wrap(storage.TxIsNil, op, "checking transaction")
+	}
+
+	query := fmt.Sprintf("DELETE FROM events WHERE id = %d", id)
+
+	_, err := tx.Exec(query)
+	if err != nil {
+		return errors2.Wrap(err, op, "executing query")
+	}
+
+	return nil
+}
+
 func (s *EventStorage) PublishEvent(id int) error {
 	const op = "eventStorage.PublishEvent"
 
@@ -214,4 +232,16 @@ func (s *EventStorage) SaveEventCover(coverImage []byte, key []string, ext strin
 	}
 
 	return nil
+}
+
+func (s *EventStorage) DeleteEventCoverPhoto(path string) error {
+	const op = "eventStorage.DeleteEventCoverPhoto"
+
+	if strings.TrimSpace(path) == "" {
+		return errors.New("path is empty")
+	}
+
+	fmt.Println("deleting ", filepath.Join(s.UploadDir(), path))
+
+	return errors2.Wrap(os.Remove(filepath.Join(s.UploadDir(), path)), op, "deleting file")
 }
